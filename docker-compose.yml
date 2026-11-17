@@ -1,0 +1,18 @@
+services:
+  tga-winners:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DB_PATH=/app/data/database.sqlite
+      - UPLOAD_DIR=/app/data/uploads
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - JWT_SECRET=${JWT_SECRET:-dev_secret_change_in_production}
+    volumes:
+      - tga_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  tga_data:
