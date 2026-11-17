@@ -10,21 +10,23 @@ import {
   Users,
   AlertCircle,
   Lock,
+  LogIn,
+  UserCheck,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import CountdownBadge from '../components/CountdownBadge';
 import CategoryCard from '../components/CategoryCard';
 import { apiFetch } from '../lib/api';
-import { setStoredVoterToken } from '../lib/voterIdentity';
+import { useAuth } from '../lib/AuthContext';
 
 export default function Home() {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedYear = searchParams.get('year');
+  const { user, loadingAuth } = useAuth();
 
   const [editions, setEditions] = useState([]);
   const [editionData, setEditionData] = useState(null);
   const [votesMap, setVotesMap] = useState({});
-  const [nickname, setNickname] = useState('');
   const [existingVoter, setExistingVoter] = useState(null);
   const [filterMode, setFilterMode] = useState('all'); // 'all' | 'pending'
   const [loading, setLoading] = useState(true);
@@ -52,37 +54,42 @@ export default function Home() {
       setEditionData(data);
 
       if (data?.edition?.year) {
-        const myVotesRes = await apiFetch(`/api/editions/${data.edition.year}/my-votes`, {
-          includeVoterHeaders: true,
-        });
+        const myVotesRes = await apiFetch(`/api/editions/${data.edition.year}/my-votes`);
+        const serverVotes = myVotesRes.votes || [];
+        const draftKey = `tga_draft_${data.edition.year}`;
 
-        const map = {};
-        for (const v of myVotesRes.votes || []) {
-          map[v.category_id] = {
-            will_win_nominee_id: v.will_win_nominee_id ?? null,
-            want_win_nominee_id: v.want_win_nominee_id ?? null,
-          };
-        }
-        setVotesMap(map);
-
-        if (myVotesRes.voter) {
-          setExistingVoter(myVotesRes.voter);
-          setNickname(myVotesRes.voter.nickname || '');
-          setStoredVoterToken(myVotesRes.voter.voter_token);
+        if (serverVotes.length > 0) {
+          const map = {};
+          for (const v of serverVotes) {
+            map[v.category_id] = {
+              will_win_nominee_id: v.will_win_nominee_id ?? null,
+              want_win_nominee_id: v.want_win_nominee_id ?? null,
+            };
+          }
+          setVotesMap(map);
         } else {
-          setExistingVoter(null);
+          try {
+            const rawDraft = sessionStorage.getItem(draftKey);
+            setVotesMap(rawDraft ? JSON.parse(rawDraft) : {});
+          } catch {
+            setVotesMap({});
+          }
         }
+
+        setExistingVoter(myVotesRes.voter || null);
       }
     } catch (err) {
       setFeedback({ type: 'error', text: err.message });
     } finally {
       setLoading(false);
     }
-  }, [requestedYear]);
+  }, [requestedYear, user?.id]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (!loadingAuth) {
+      loadData();
+    }
+  }, [loadingAuth, loadData]);
 
   const handleSelectYear = (year) => {
     setSearchParams({ year: String(year) });
@@ -92,29 +99,46 @@ export default function Home() {
   const categories = editionData?.categories || [];
   const summary = editionData?.summary || { total_voters: 0, total_categories: 0 };
 
+  const persistDraft = (year, nextMap) => {
+    if (!year) return;
+    try {
+      sessionStorage.setItem(`tga_draft_${year}`, JSON.stringify(nextMap));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
   const now = Date.now();
   const isBeforeStart = edition ? now < new Date(edition.voting_start).getTime() : false;
   const isAfterEnd = edition ? now >= new Date(edition.voting_end).getTime() : false;
   const isVotingOpen = Boolean(edition && !isBeforeStart && !isAfterEnd);
 
   const handleSelectWillWin = (categoryId, nomineeId) => {
-    setVotesMap((prev) => ({
-      ...prev,
-      [categoryId]: {
-        will_win_nominee_id: nomineeId,
-        want_win_nominee_id: prev[categoryId]?.want_win_nominee_id ?? null,
-      },
-    }));
+    setVotesMap((prev) => {
+      const next = {
+        ...prev,
+        [categoryId]: {
+          will_win_nominee_id: nomineeId,
+          want_win_nominee_id: prev[categoryId]?.want_win_nominee_id ?? null,
+        },
+      };
+      persistDraft(edition?.year, next);
+      return next;
+    });
   };
 
   const handleSelectWantWin = (categoryId, nomineeId) => {
-    setVotesMap((prev) => ({
-      ...prev,
-      [categoryId]: {
-        will_win_nominee_id: prev[categoryId]?.will_win_nominee_id ?? null,
-        want_win_nominee_id: nomineeId,
-      },
-    }));
+    setVotesMap((prev) => {
+      const next = {
+        ...prev,
+        [categoryId]: {
+          will_win_nominee_id: prev[categoryId]?.will_win_nominee_id ?? null,
+          want_win_nominee_id: nomineeId,
+        },
+      };
+      persistDraft(edition?.year, next);
+      return next;
+    });
   };
 
   const filledCount = useMemo(() => {
@@ -136,13 +160,7 @@ export default function Home() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!edition || !isVotingOpen) return;
-
-    const trimmed = nickname.trim();
-    if (!trimmed) {
-      setFeedback({ type: 'error', text: 'Digite seu apelido antes de salvar.' });
-      return;
-    }
+    if (!edition || !isVotingOpen || !user) return;
 
     setSaving(true);
     setFeedback(null);
@@ -158,39 +176,24 @@ export default function Home() {
     try {
       const res = await apiFetch(`/api/editions/${edition.year}/votes`, {
         method: 'POST',
-        includeVoterHeaders: true,
-        body: {
-          nickname: trimmed,
-          votes: payloadVotes,
-        },
+        body: { votes: payloadVotes },
       });
 
       setExistingVoter(res.voter);
-      setStoredVoterToken(res.voter.voter_token);
+      try {
+        sessionStorage.removeItem(`tga_draft_${edition.year}`);
+      } catch {
+        // ignore
+      }
       setFeedback({ type: 'success', text: 'Palpites salvos!' });
     } catch (err) {
-      if (err.status === 409 && err.data?.existing_voter) {
-        const existing = err.data.existing_voter;
-        setExistingVoter(existing);
-        setNickname(existing.nickname);
-        setStoredVoterToken(existing.voter_token);
-
-        const map = {};
-        for (const v of err.data.votes || []) {
-          map[v.category_id] = {
-            will_win_nominee_id: v.will_win_nominee_id ?? null,
-            want_win_nominee_id: v.want_win_nominee_id ?? null,
-          };
-        }
-        setVotesMap(map);
-        setFeedback({ type: 'info', text: err.message });
-      } else {
-        setFeedback({ type: 'error', text: err.message });
-      }
+      setFeedback({ type: 'error', text: err.message });
     } finally {
       setSaving(false);
     }
   };
+
+  const redirectBack = edition ? `/?year=${edition.year}` : '/';
 
   return (
     <div className="min-h-screen bg-zinc-950 pb-32 text-zinc-100">
@@ -334,38 +337,26 @@ export default function Home() {
             )}
 
             {isVotingOpen ? (
-              <form
-                onSubmit={handleSave}
-                className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex items-center justify-between gap-3 sm:justify-start">
-                  <div className="text-xs text-zinc-400">
-                    <span className="font-bold text-amber-400">{filledCount}</span>/{categories.length}{' '}
-                    categorias preenchidas
+              user ? (
+                <form
+                  onSubmit={handleSave}
+                  className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="flex items-center justify-between gap-3 sm:justify-start">
+                    <div className="text-xs text-zinc-400">
+                      <span className="font-bold text-amber-400">{filledCount}</span>/
+                      {categories.length} categorias preenchidas
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 text-xs text-zinc-400">
+                      <UserCheck className="h-3.5 w-3.5 text-emerald-400" />
+                      <strong className="text-zinc-200">{user.username}</strong>
+                    </span>
                   </div>
-                  <div className="h-1.5 w-24 overflow-hidden rounded-full bg-zinc-800 sm:hidden">
-                    <div
-                      className="h-full bg-amber-500 transition-all"
-                      style={{
-                        width: `${categories.length ? (filledCount / categories.length) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    maxLength={40}
-                    placeholder="Seu apelido..."
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    className="w-full min-w-0 flex-1 rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition focus:border-amber-500 sm:w-52"
-                  />
                   <button
                     type="submit"
                     disabled={saving}
-                    className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-60"
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2 text-sm font-bold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-60"
                   >
                     {saving ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -374,8 +365,31 @@ export default function Home() {
                     )}
                     <span>Salvar Palpites</span>
                   </button>
+                </form>
+              ) : (
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-xs text-zinc-400">
+                    <span className="font-bold text-amber-400">{filledCount}</span>/
+                    {categories.length} selecionadas · Entre ou crie uma conta para salvar
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/entrar?mode=register&redirect=${encodeURIComponent(redirectBack)}`}
+                      className="rounded-xl border border-zinc-700 bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-zinc-200 transition hover:border-amber-500/40"
+                    >
+                      Criar conta
+                    </Link>
+                    <Link
+                      to={`/entrar?redirect=${encodeURIComponent(redirectBack)}`}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-zinc-950 transition hover:bg-amber-400"
+                    >
+                      <LogIn className="h-3.5 w-3.5" />
+                      <span>Entrar para salvar</span>
+                    </Link>
+                  </div>
                 </div>
-              </form>
+              )
             ) : (
               <div className="flex items-center justify-between gap-3 text-xs text-zinc-400">
                 <span className="inline-flex items-center gap-2">

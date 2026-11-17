@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import fs from 'node:fs';
 import path from 'node:path';
 import publicRouter from './routes/public.js';
+import authRouter from './routes/auth.js';
 import adminRouter, { getUploadDir } from './routes/admin.js';
 
 export function createApp() {
@@ -22,6 +23,7 @@ export function createApp() {
     res.json({ ok: true });
   });
 
+  app.use('/api/auth', authRouter);
   app.use('/api', publicRouter);
   app.use('/api/admin', adminRouter);
 

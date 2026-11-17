@@ -47,9 +47,17 @@ export function initDatabase(dbPath = getDefaultDbPath()) {
       FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS voters (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       edition_id INTEGER NOT NULL,
+      user_id INTEGER,
       nickname TEXT NOT NULL,
       voter_token TEXT NOT NULL,
       ip_address TEXT,
@@ -58,7 +66,8 @@ export function initDatabase(dbPath = getDefaultDbPath()) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       UNIQUE (edition_id, voter_token),
-      FOREIGN KEY (edition_id) REFERENCES editions(id) ON DELETE CASCADE
+      FOREIGN KEY (edition_id) REFERENCES editions(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS votes (
@@ -74,6 +83,7 @@ export function initDatabase(dbPath = getDefaultDbPath()) {
       FOREIGN KEY (want_win_nominee_id) REFERENCES nominees(id) ON DELETE SET NULL
     );
 
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_nocase ON users(LOWER(username));
     CREATE INDEX IF NOT EXISTS idx_categories_edition ON categories(edition_id, display_order);
     CREATE INDEX IF NOT EXISTS idx_nominees_category ON nominees(category_id);
     CREATE INDEX IF NOT EXISTS idx_voters_edition ON voters(edition_id);
@@ -81,6 +91,15 @@ export function initDatabase(dbPath = getDefaultDbPath()) {
     CREATE INDEX IF NOT EXISTS idx_votes_voter ON votes(voter_id);
     CREATE INDEX IF NOT EXISTS idx_votes_category ON votes(category_id);
   `);
+
+  // Migração segura para bancos SQLite existentes antes da coluna user_id
+  const voterColumns = db.prepare('PRAGMA table_info(voters)').all();
+  if (!voterColumns.some((c) => c.name === 'user_id')) {
+    db.exec('ALTER TABLE voters ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;');
+  }
+  db.exec(
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_voters_edition_user ON voters(edition_id, user_id) WHERE user_id IS NOT NULL;'
+  );
 
   dbInstance = db;
   return db;

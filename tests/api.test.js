@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { initDatabase } from '../server/db.js';
+import { initDatabase, getDb } from '../server/db.js';
 import { createApp } from '../server/app.js';
 import { parseTextInput } from '../scripts/fetch-nominees.mjs';
 
@@ -129,26 +129,68 @@ describe('TGA Winners API End-to-End', () => {
       })
     ).json();
 
-    // 5. Reject voting on closed edition (2025)
-    const closedVoteRes = await fetch(`${baseUrl}/api/editions/2025/votes`, {
+    // 5. Reject unauthenticated voting
+    const unauthVoteRes = await fetch(`${baseUrl}/api/editions/2026/votes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nickname: 'Linsmar', votes: [] }),
+      body: JSON.stringify({ votes: [] }),
+    });
+    assert.equal(unauthVoteRes.status, 401);
+
+    // 6. Register users (Linsmar & Amigo) and prevent duplicate username (case-insensitive)
+    const reg1Res = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'Linsmar', password: 'mypassword' }),
+    });
+    assert.equal(reg1Res.status, 201);
+    const linsmarCookie = reg1Res.headers.get('set-cookie').split(';')[0];
+
+    const dupUserRes = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'linsmar', password: 'otherpassword' }),
+    });
+    assert.equal(dupUserRes.status, 409);
+
+    const reg2Res = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'Amigo', password: 'friendpassword' }),
+    });
+    assert.equal(reg2Res.status, 201);
+    const amigoCookie = reg2Res.headers.get('set-cookie').split(';')[0];
+
+    // Wrong password login rejected
+    const badLoginRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'Linsmar', password: 'wrong' }),
+    });
+    assert.equal(badLoginRes.status, 401);
+
+    // Valid login works
+    const loginUserRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'Linsmar', password: 'mypassword' }),
+    });
+    assert.equal(loginUserRes.status, 200);
+    const linsmarLoginCookie = loginUserRes.headers.get('set-cookie').split(';')[0];
+
+    // Reject voting on closed edition (2025) even when authenticated
+    const closedVoteRes = await fetch(`${baseUrl}/api/editions/2025/votes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: linsmarCookie },
+      body: JSON.stringify({ votes: [] }),
     });
     assert.equal(closedVoteRes.status, 403);
 
-    // 6. Voter 1 submits votes for 2026
+    // 7. Linsmar submits votes for 2026
     const vote1Res = await fetch(`${baseUrl}/api/editions/2026/votes`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Forwarded-For': '203.0.113.10',
-        'User-Agent': 'PhoneBrowser/1.0',
-        'X-Device-Fingerprint': '390x844|America/Sao_Paulo|pt-BR',
-        'X-Voter-Token': 'token-linsmar-1',
-      },
+      headers: { 'Content-Type': 'application/json', Cookie: linsmarCookie },
       body: JSON.stringify({
-        nickname: 'Linsmar',
         votes: [
           {
             category_id: gotyCat.id,
@@ -165,38 +207,11 @@ describe('TGA Winners API End-to-End', () => {
     });
     assert.equal(vote1Res.status, 200);
 
-    // 7. Same device/IP in incognito (new token) gets 409 and returns existing voter
-    const dupRes = await fetch(`${baseUrl}/api/editions/2026/votes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Forwarded-For': '203.0.113.10',
-        'User-Agent': 'PhoneBrowser/1.0',
-        'X-Device-Fingerprint': '390x844|America/Sao_Paulo|pt-BR',
-        'X-Voter-Token': 'token-incognito-2',
-      },
-      body: JSON.stringify({
-        nickname: 'FakeSecondAccount',
-        votes: [],
-      }),
-    });
-    assert.equal(dupRes.status, 409);
-    const dupBody = await dupRes.json();
-    assert.equal(dupBody.existing_voter.nickname, 'Linsmar');
-    assert.equal(dupBody.existing_voter.voter_token, 'token-linsmar-1');
-
-    // 8. Different friend on same Wi-Fi (different device) CAN vote
+    // 8. Amigo submits votes for 2026
     const vote2Res = await fetch(`${baseUrl}/api/editions/2026/votes`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Forwarded-For': '203.0.113.10',
-        'User-Agent': 'AndroidChrome/2.0',
-        'X-Device-Fingerprint': '412x915|America/Sao_Paulo|pt-BR',
-        'X-Voter-Token': 'token-friend-2',
-      },
+      headers: { 'Content-Type': 'application/json', Cookie: amigoCookie },
       body: JSON.stringify({
-        nickname: 'Amigo',
         votes: [
           {
             category_id: gotyCat.id,
@@ -225,23 +240,20 @@ describe('TGA Winners API End-to-End', () => {
     assert.equal(rankData.ranking[1].nickname, 'Amigo');
     assert.equal(rankData.ranking[1].total_points, 0);
 
-    // 10. Linsmar edits existing votes using their token
+    // 10. Linsmar logs in on another device and edits existing votes (still 1 entry in ranking)
     const myVotesRes = await fetch(`${baseUrl}/api/editions/2026/my-votes`, {
-      headers: { 'X-Voter-Token': 'token-linsmar-1' },
+      headers: { Cookie: linsmarLoginCookie },
     });
     assert.equal(myVotesRes.status, 200);
     const myVotesData = await myVotesRes.json();
+    assert.equal(myVotesData.user.username, 'Linsmar');
     assert.equal(myVotesData.voter.nickname, 'Linsmar');
     assert.equal(myVotesData.votes.length, 2);
 
     const editVoteRes = await fetch(`${baseUrl}/api/editions/2026/votes`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Voter-Token': 'token-linsmar-1',
-      },
+      headers: { 'Content-Type': 'application/json', Cookie: linsmarLoginCookie },
       body: JSON.stringify({
-        nickname: 'Linsmar Atualizado',
         votes: [
           {
             category_id: gotyCat.id,
@@ -254,7 +266,8 @@ describe('TGA Winners API End-to-End', () => {
     assert.equal(editVoteRes.status, 200);
 
     const rankAfterEdit = await (await fetch(`${baseUrl}/api/editions/2026/ranking`)).json();
-    assert.equal(rankAfterEdit.ranking[0].nickname, 'Linsmar Atualizado');
+    assert.equal(rankAfterEdit.ranking.length, 2);
+    assert.equal(rankAfterEdit.ranking[0].nickname, 'Linsmar');
     assert.equal(rankAfterEdit.ranking[0].total_points, 5);
 
     // 11. Image upload & static serving
@@ -341,5 +354,35 @@ describe('TGA Winners API End-to-End', () => {
     assert.equal(parsedTxt.year, 2027);
     assert.equal(parsedTxt.categories.length, 2);
     assert.equal(parsedTxt.categories[1].nominees[0].kind, 'person');
+
+    // 15. Vinculação automática de palpites legados (user_id NULL) ao registrar mesmo nome
+    const db = getDb();
+    const nowIso = new Date().toISOString();
+    const legacyInfo = db
+      .prepare(
+        `INSERT INTO voters (edition_id, user_id, nickname, voter_token, created_at, updated_at)
+         VALUES (?, NULL, 'LegacyLinsmar', 'legacy-tok-1', ?, ?)`
+      )
+      .run(activeData.edition.id, nowIso, nowIso);
+    db.prepare(
+      `INSERT INTO votes (voter_id, category_id, will_win_nominee_id, want_win_nominee_id)
+       VALUES (?, ?, ?, ?)`
+    ).run(legacyInfo.lastInsertRowid, gotyCat.id, nom2.nominee.id, nom2.nominee.id);
+
+    const legacyRegRes = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'LegacyLinsmar', password: 'secret' }),
+    });
+    assert.equal(legacyRegRes.status, 201);
+    const legacyCookie = legacyRegRes.headers.get('set-cookie').split(';')[0];
+
+    const claimedRes = await fetch(`${baseUrl}/api/editions/2026/my-votes`, {
+      headers: { Cookie: legacyCookie },
+    });
+    const claimedData = await claimedRes.json();
+    assert.equal(claimedData.voter.nickname, 'LegacyLinsmar');
+    assert.equal(claimedData.votes.length, 1);
+    assert.equal(claimedData.votes[0].will_win_nominee_id, nom2.nominee.id);
   });
 });

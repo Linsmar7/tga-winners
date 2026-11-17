@@ -1,6 +1,7 @@
 import express from 'express';
 import crypto from 'node:crypto';
 import { getDb } from '../db.js';
+import { readUserFromReq, requireUser } from '../middleware/auth.js';
 import { buildVoterDetails, computeRankingAndStats } from '../scoring.js';
 
 const router = express.Router();
@@ -30,13 +31,6 @@ function getClientIp(req) {
 }
 
 function getClientContext(req) {
-  const tokenFromCookie = req.cookies?.voter_token;
-  const tokenFromHeader = req.headers['x-voter-token'];
-  const voterToken =
-    (typeof tokenFromHeader === 'string' && tokenFromHeader.trim()) ||
-    (typeof tokenFromCookie === 'string' && tokenFromCookie.trim()) ||
-    null;
-
   const ipAddress = getClientIp(req);
   const userAgent =
     typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'].slice(0, 500) : '';
@@ -45,62 +39,13 @@ function getClientContext(req) {
       ? req.headers['x-device-fingerprint'].slice(0, 255)
       : '';
 
-  return { voterToken, ipAddress, userAgent, deviceFingerprint };
-}
-
-function setVoterCookie(res, token) {
-  res.cookie('voter_token', token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 365 * 24 * 60 * 60 * 1000,
-    path: '/',
-  });
+  return { ipAddress, userAgent, deviceFingerprint };
 }
 
 function findEditionByParam(db, yearParam) {
   const num = Number(yearParam);
   if (!Number.isInteger(num)) return null;
   return db.prepare('SELECT * FROM editions WHERE year = ?').get(num) || null;
-}
-
-function findExistingVoterByDevice(db, editionId, { ipAddress, userAgent, deviceFingerprint }) {
-  if (!ipAddress || !userAgent) return null;
-
-  if (deviceFingerprint) {
-    const exact = db
-      .prepare(
-        `SELECT * FROM voters
-         WHERE edition_id = ? AND ip_address = ? AND user_agent = ? AND device_fingerprint = ?
-         LIMIT 1`
-      )
-      .get(editionId, ipAddress, userAgent, deviceFingerprint);
-    if (exact) return exact;
-  }
-
-  return (
-    db
-      .prepare(
-        `SELECT * FROM voters
-         WHERE edition_id = ? AND ip_address = ? AND user_agent = ?
-           AND (device_fingerprint IS NULL OR device_fingerprint = '' OR ? = '')
-         LIMIT 1`
-      )
-      .get(editionId, ipAddress, userAgent, deviceFingerprint || '') || null
-  );
-}
-
-function resolveVoter(db, editionId, ctx) {
-  if (ctx.voterToken) {
-    const byToken = db
-      .prepare('SELECT * FROM voters WHERE edition_id = ? AND voter_token = ? LIMIT 1')
-      .get(editionId, ctx.voterToken);
-    if (byToken) return { voter: byToken, matchedBy: 'token' };
-  }
-
-  const byDevice = findExistingVoterByDevice(db, editionId, ctx);
-  if (byDevice) return { voter: byDevice, matchedBy: 'device' };
-
-  return { voter: null, matchedBy: null };
 }
 
 function getEditionFullData(db, edition) {
@@ -195,14 +140,27 @@ router.get('/editions/:year/my-votes', (req, res) => {
     return res.status(404).json({ error: 'Edição não encontrada' });
   }
 
-  const ctx = getClientContext(req);
-  const { voter } = resolveVoter(db, edition.id, ctx);
-
-  if (!voter) {
-    return res.json({ voter: null, votes: [] });
+  const authUser = readUserFromReq(req);
+  if (!authUser) {
+    return res.json({ user: null, voter: null, votes: [] });
   }
 
-  setVoterCookie(res, voter.voter_token);
+  const dbUser = db
+    .prepare('SELECT id, username FROM users WHERE id = ?')
+    .get(authUser.id);
+  if (!dbUser) {
+    return res.json({ user: null, voter: null, votes: [] });
+  }
+
+  const voter =
+    db
+      .prepare('SELECT * FROM voters WHERE edition_id = ? AND user_id = ? LIMIT 1')
+      .get(edition.id, dbUser.id) || null;
+
+  if (!voter) {
+    return res.json({ user: dbUser, voter: null, votes: [] });
+  }
+
   const votes = db
     .prepare(
       'SELECT category_id, will_win_nominee_id, want_win_nominee_id FROM votes WHERE voter_id = ?'
@@ -210,21 +168,28 @@ router.get('/editions/:year/my-votes', (req, res) => {
     .all(voter.id);
 
   return res.json({
+    user: dbUser,
     voter: {
       id: voter.id,
       nickname: voter.nickname,
-      voter_token: voter.voter_token,
       updated_at: voter.updated_at,
     },
     votes,
   });
 });
 
-router.post('/editions/:year/votes', (req, res) => {
+router.post('/editions/:year/votes', requireUser, (req, res) => {
   const db = getDb();
   const edition = findEditionByParam(db, req.params.year);
   if (!edition) {
     return res.status(404).json({ error: 'Edição não encontrada' });
+  }
+
+  const dbUser = db
+    .prepare('SELECT id, username FROM users WHERE id = ?')
+    .get(req.user.id);
+  if (!dbUser) {
+    return res.status(401).json({ error: 'Sessão inválida. Faça login novamente.' });
   }
 
   const now = Date.now();
@@ -238,24 +203,8 @@ router.post('/editions/:year/votes', (req, res) => {
     return res.status(403).json({ error: 'A votação para esta edição já foi encerrada.' });
   }
 
-  const rawNickname = typeof req.body?.nickname === 'string' ? req.body.nickname.trim() : '';
-  if (!rawNickname || rawNickname.length > 40) {
-    return res
-      .status(400)
-      .json({ error: 'Informe um apelido válido (entre 1 e 40 caracteres).' });
-  }
-
   const rawVotes = Array.isArray(req.body?.votes) ? req.body.votes : [];
   const ctx = getClientContext(req);
-  const bodyToken =
-    typeof req.body?.voter_token === 'string' && req.body.voter_token.trim()
-      ? req.body.voter_token.trim()
-      : null;
-
-  const effectiveCtx = {
-    ...ctx,
-    voterToken: ctx.voterToken || bodyToken,
-  };
 
   // Verifica validade de categorias e indicados
   const editionCategories = db
@@ -300,42 +249,13 @@ router.post('/editions/:year/votes', (req, res) => {
     }
   }
 
-  // Trava híbrida: verifica se existe perfil pelo token ou pelo dispositivo/IP
-  let existingVoter = null;
-  if (effectiveCtx.voterToken) {
-    existingVoter =
-      db
-        .prepare('SELECT * FROM voters WHERE edition_id = ? AND voter_token = ? LIMIT 1')
-        .get(edition.id, effectiveCtx.voterToken) || null;
-  }
-
-  if (!existingVoter) {
-    const deviceMatch = findExistingVoterByDevice(db, edition.id, effectiveCtx);
-    if (deviceMatch) {
-      // Se já existe um palpite neste dispositivo/IP e o cliente veio com outro token ou sem token,
-      // bloqueia criação de um segundo perfil e devolve o perfil existente para sincronização.
-      const existingVotes = db
-        .prepare(
-          'SELECT category_id, will_win_nominee_id, want_win_nominee_id FROM votes WHERE voter_id = ?'
-        )
-        .all(deviceMatch.id);
-
-      setVoterCookie(res, deviceMatch.voter_token);
-      return res.status(409).json({
-        error: `Já existe um palpite registrado neste dispositivo/IP (${deviceMatch.nickname}). Seus palpites anteriores foram carregados.`,
-        existing_voter: {
-          id: deviceMatch.id,
-          nickname: deviceMatch.nickname,
-          voter_token: deviceMatch.voter_token,
-          updated_at: deviceMatch.updated_at,
-        },
-        votes: existingVotes,
-      });
-    }
-  }
+  const existingVoter =
+    db
+      .prepare('SELECT * FROM voters WHERE edition_id = ? AND user_id = ? LIMIT 1')
+      .get(edition.id, dbUser.id) || null;
 
   const nowIso = new Date().toISOString();
-  const finalToken = existingVoter?.voter_token || effectiveCtx.voterToken || crypto.randomUUID();
+  const finalToken = existingVoter?.voter_token || crypto.randomUUID();
 
   const saveTransaction = db.transaction(() => {
     let voterId;
@@ -345,10 +265,10 @@ router.post('/editions/:year/votes', (req, res) => {
          SET nickname = ?, ip_address = ?, user_agent = ?, device_fingerprint = ?, updated_at = ?
          WHERE id = ?`
       ).run(
-        rawNickname,
-        effectiveCtx.ipAddress,
-        effectiveCtx.userAgent,
-        effectiveCtx.deviceFingerprint,
+        dbUser.username,
+        ctx.ipAddress,
+        ctx.userAgent,
+        ctx.deviceFingerprint,
         nowIso,
         existingVoter.id
       );
@@ -357,16 +277,17 @@ router.post('/editions/:year/votes', (req, res) => {
     } else {
       const result = db
         .prepare(
-          `INSERT INTO voters (edition_id, nickname, voter_token, ip_address, user_agent, device_fingerprint, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO voters (edition_id, user_id, nickname, voter_token, ip_address, user_agent, device_fingerprint, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           edition.id,
-          rawNickname,
+          dbUser.id,
+          dbUser.username,
           finalToken,
-          effectiveCtx.ipAddress,
-          effectiveCtx.userAgent,
-          effectiveCtx.deviceFingerprint,
+          ctx.ipAddress,
+          ctx.userAgent,
+          ctx.deviceFingerprint,
           nowIso,
           nowIso
         );
@@ -386,13 +307,11 @@ router.post('/editions/:year/votes', (req, res) => {
   });
 
   const voterId = saveTransaction();
-  setVoterCookie(res, finalToken);
 
   return res.json({
     voter: {
       id: Number(voterId),
-      nickname: rawNickname,
-      voter_token: finalToken,
+      nickname: dbUser.username,
       updated_at: nowIso,
     },
     votes: normalizedVotes,
