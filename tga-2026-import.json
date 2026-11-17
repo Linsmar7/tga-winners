@@ -1,0 +1,962 @@
+{
+  "schema": "tga-winners-import/v1",
+  "year": 2026,
+  "generated_at": "2026-11-17T19:32:08.498Z",
+  "categories": [
+    {
+      "name": "Game of the Year",
+      "display_order": 1,
+      "nominees": [
+        {
+          "name": "007 First Light",
+          "description": "IO Interactive",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3768760/b22c316df2d62a2d1edd8e2bbac3e3d503a09cd9/capsule_231x87_alt_assets_5.jpg?t=1793979129"
+        },
+        {
+          "name": "Control Resonant",
+          "description": "Remedy Entertainment / Annapurna",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3669870/867a73afa5f21c28aaa14e9b0a4d895c540d4a0c/capsule_231x87.jpg?t=1794822488"
+        },
+        {
+          "name": "Grand Theft Auto VI",
+          "description": "Rockstar Games",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1546990/header.jpg"
+        },
+        {
+          "name": "Phantom Blade Zero",
+          "description": "S-GAME",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/aef06490c9a4ad912142fe3b766ee08a2b38ef80/capsule_231x87.jpg?t=1793261976"
+        },
+        {
+          "name": "Resident Evil Requiem",
+          "description": "Capcom",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3764200/64f506b9b6210df6055136e7017f2082957e5b22/capsule_231x87.jpg?t=1779840172"
+        },
+        {
+          "name": "The Legend of Zelda: Ocarina of Time",
+          "description": "Nintendo",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/57/The_Legend_of_Zelda_Ocarina_of_Time.jpg/330px-The_Legend_of_Zelda_Ocarina_of_Time.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        }
+      ]
+    },
+    {
+      "name": "Best Game Direction",
+      "display_order": 2,
+      "nominees": [
+        {
+          "name": "Control Resonant",
+          "description": "Remedy Entertainment / Annapurna",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3669870/867a73afa5f21c28aaa14e9b0a4d895c540d4a0c/capsule_231x87.jpg?t=1794822488"
+        },
+        {
+          "name": "Grand Theft Auto VI",
+          "description": "Rockstar Games",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1546990/header.jpg"
+        },
+        {
+          "name": "Phantom Blade Zero",
+          "description": "S-GAME",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/aef06490c9a4ad912142fe3b766ee08a2b38ef80/capsule_231x87.jpg?t=1793261976"
+        },
+        {
+          "name": "Pragmata",
+          "description": "Capcom",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3357650/3e7cf55cf72a980ac94cf45d4212e8f0cb566f7f/capsule_231x87.jpg?t=1791454600"
+        },
+        {
+          "name": "Resident Evil Requiem",
+          "description": "Capcom",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3764200/64f506b9b6210df6055136e7017f2082957e5b22/capsule_231x87.jpg?t=1779840172"
+        }
+      ]
+    },
+    {
+      "name": "Best Narrative",
+      "display_order": 3,
+      "nominees": [
+        {
+          "name": "007 First Light",
+          "description": "IO Interactive",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3768760/b22c316df2d62a2d1edd8e2bbac3e3d503a09cd9/capsule_231x87_alt_assets_5.jpg?t=1793979129"
+        },
+        {
+          "name": "Control Resonant",
+          "description": "Remedy Entertainment / Annapurna",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3669870/867a73afa5f21c28aaa14e9b0a4d895c540d4a0c/capsule_231x87.jpg?t=1794822488"
+        },
+        {
+          "name": "Grand Theft Auto VI",
+          "description": "Rockstar Games",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1546990/header.jpg"
+        },
+        {
+          "name": "Resident Evil Requiem",
+          "description": "Capcom",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3764200/64f506b9b6210df6055136e7017f2082957e5b22/capsule_231x87.jpg?t=1779840172"
+        },
+        {
+          "name": "The Blood of Dawnwalker",
+          "description": "Rebel Wolves / Bandai Namco",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3751260/9f27869ccdf38981edd24a8b91c5915aefacba4e/capsule_231x87_alt_assets_1.jpg?t=1794911181"
+        }
+      ]
+    },
+    {
+      "name": "Best Art Direction",
+      "display_order": 4,
+      "nominees": [
+        {
+          "name": "Control Resonant",
+          "description": "Remedy Entertainment / Annapurna",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3669870/867a73afa5f21c28aaa14e9b0a4d895c540d4a0c/capsule_231x87.jpg?t=1794822488"
+        },
+        {
+          "name": "Grand Theft Auto VI",
+          "description": "Rockstar Games",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1546990/header.jpg"
+        },
+        {
+          "name": "Mouse: P.I. for Hire",
+          "description": "Fumi Games / PlaySide",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2416450/header.jpg"
+        },
+        {
+          "name": "Phantom Blade Zero",
+          "description": "S-GAME",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/aef06490c9a4ad912142fe3b766ee08a2b38ef80/capsule_231x87.jpg?t=1793261976"
+        },
+        {
+          "name": "The Legend of Zelda: Ocarina of Time",
+          "description": "Nintendo",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/57/The_Legend_of_Zelda_Ocarina_of_Time.jpg/330px-The_Legend_of_Zelda_Ocarina_of_Time.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        }
+      ]
+    },
+    {
+      "name": "Best Score and Music",
+      "display_order": 5,
+      "nominees": [
+        {
+          "name": "Ace Combat 8: Wings of Theve",
+          "description": "Bandai Namco Aces / Bandai Namco",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/f72b0d0ef7d7beed96998f1ac0bdfb788a01845f/capsule_231x87.jpg?t=1794887021"
+        },
+        {
+          "name": "Grand Theft Auto VI",
+          "description": "Rockstar Games",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1546990/header.jpg"
+        },
+        {
+          "name": "Mixtape",
+          "description": "Beethoven & Dinosaur / Annapurna Interactive",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2582320/header.jpg"
+        },
+        {
+          "name": "Phantom Blade Zero",
+          "description": "S-GAME",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/aef06490c9a4ad912142fe3b766ee08a2b38ef80/capsule_231x87.jpg?t=1793261976"
+        },
+        {
+          "name": "The Legend of Zelda: Ocarina of Time",
+          "description": "Nintendo",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/57/The_Legend_of_Zelda_Ocarina_of_Time.jpg/330px-The_Legend_of_Zelda_Ocarina_of_Time.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        }
+      ]
+    },
+    {
+      "name": "Best Audio Design",
+      "display_order": 6,
+      "nominees": [
+        {
+          "name": "Ace Combat 8: Wings of Theve",
+          "description": "Bandai Namco Aces / Bandai Namco",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/f72b0d0ef7d7beed96998f1ac0bdfb788a01845f/capsule_231x87.jpg?t=1794887021"
+        },
+        {
+          "name": "Control Resonant",
+          "description": "Remedy Entertainment / Annapurna Interactive",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3669870/867a73afa5f21c28aaa14e9b0a4d895c540d4a0c/capsule_231x87.jpg?t=1794822488"
+        },
+        {
+          "name": "Grand Theft Auto VI",
+          "description": "Rockstar Games",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1546990/header.jpg"
+        },
+        {
+          "name": "Resident Evil Requiem",
+          "description": "Capcom",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3764200/64f506b9b6210df6055136e7017f2082957e5b22/capsule_231x87.jpg?t=1779840172"
+        },
+        {
+          "name": "Star Wars: Galactic Racer",
+          "description": "Fuse Games / Secret Mode",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/13ac6002a7cd1c867f8bf2f650101fe9d91ce4f9/capsule_231x87.jpg?t=1791388584"
+        }
+      ]
+    },
+    {
+      "name": "Best Performance",
+      "display_order": 7,
+      "nominees": [
+        {
+          "name": "Angela Sant'Albano",
+          "description": "Resident Evil Requiem",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3764200/64f506b9b6210df6055136e7017f2082957e5b22/capsule_231x87.jpg?t=1779840172"
+        },
+        {
+          "name": "Liam McIntyre",
+          "description": "Marvel's Wolverine",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Liam_McIntyre_at_53rd_Saturn_Awards_2026.jpg/330px-Liam_McIntyre_at_53rd_Saturn_Awards_2026.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "Manni L. Perez",
+          "description": "Grand Theft Auto VI",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Manni_L._Perez.webp/330px-Manni_L._Perez.webp?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "Patrick Gibson",
+          "description": "007 First Light",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/bc/Patrick_Gibson_at_MCM_Brum_2026_01.jpg/330px-Patrick_Gibson_at_MCM_Brum_2026_01.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "Rahul Kohli",
+          "description": "Saros",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/31/Rahul_Kohli_April_2015.jpg/330px-Rahul_Kohli_April_2015.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        }
+      ]
+    },
+    {
+      "name": "Games for Impact",
+      "display_order": 8,
+      "nominees": [
+        {
+          "name": "Big Walk",
+          "description": "House House / Panic",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1478500/header.jpg"
+        },
+        {
+          "name": "Cairn",
+          "description": "The Game Bakers",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1588550/header.jpg"
+        },
+        {
+          "name": "Forever Ago",
+          "description": "Third Shift / Annapurna",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1215940/header.jpg"
+        },
+        {
+          "name": "Life is Strange: Reunion",
+          "description": "Deck Nine / Square Enix",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2624870/93e13a4730eb8b2cb6cbd1697b9eb6f1cdc9bac7/capsule_231x87.jpg?t=1777999087"
+        },
+        {
+          "name": "lily's world XD",
+          "description": "SonderingEmily / Kwalee",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3195580/header.jpg"
+        },
+        {
+          "name": "Mixtape",
+          "description": "Beethoven & Dinosaur / Annapurna",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2582320/header.jpg"
+        }
+      ]
+    },
+    {
+      "name": "Best Ongoing Game",
+      "display_order": 9,
+      "nominees": [
+        {
+          "name": "Arc Raiders",
+          "description": "Embark Studios",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1808500/header.jpg"
+        },
+        {
+          "name": "Final Fantasy XIV Online",
+          "description": "Square Enix",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/39210/header.jpg"
+        },
+        {
+          "name": "Fortnite",
+          "description": "Epic Games",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Fortnite_F_lettermark_logo.png/330px-Fortnite_F_lettermark_logo.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "No Man's Sky",
+          "description": "Hello Games",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/275850/header.jpg"
+        },
+        {
+          "name": "The Witcher 3: Wild Hunt",
+          "description": "CD Projekt Red",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/292030/header.jpg"
+        }
+      ]
+    },
+    {
+      "name": "Best Independent Game",
+      "display_order": 10,
+      "nominees": [
+        {
+          "name": "Big Walk",
+          "description": "House House / Panic",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1478500/header.jpg"
+        },
+        {
+          "name": "Cairn",
+          "description": "The Game Bakers",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1588550/header.jpg"
+        },
+        {
+          "name": "Denshattack!",
+          "description": "Undercoders / Fireshine Games",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2524850/03fd4f8c99606d9c446804bb9475b4d2de12f2d3/capsule_231x87.jpg?t=1790601329"
+        },
+        {
+          "name": "Mewgenics",
+          "description": "Edmund McMillen / Tyler Glaiel",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/686060/header.jpg"
+        },
+        {
+          "name": "Mina the Hollower",
+          "description": "Yacht Club Games",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1875580/header.jpg"
+        }
+      ]
+    },
+    {
+      "name": "Best Debut Indie Game",
+      "display_order": 11,
+      "nominees": [
+        {
+          "name": "Dressmaker",
+          "description": "Cozy Lives / Free Lives",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4019220/7f07d1dd7a97e00694481ee7747940989dc5820c/capsule_231x87.jpg?t=1794041965"
+        },
+        {
+          "name": "Esoteric Ebb",
+          "description": "Christoffer Bodegård / Raw Fury",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2057760/header.jpg"
+        },
+        {
+          "name": "Orbitals",
+          "description": "Shapefarm / Kepler",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/1/1b/Orbitals_cover_art.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=original"
+        },
+        {
+          "name": "Replaced",
+          "description": "Sad Cat Studios / Thunderful",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2060160/header.jpg"
+        },
+        {
+          "name": "Silver Pines",
+          "description": "Wych Elm / Team17",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2333000/header.jpg"
+        }
+      ]
+    },
+    {
+      "name": "Best Mobile Game",
+      "display_order": 12,
+      "nominees": [
+        {
+          "name": "Arknights: Endfield",
+          "description": "Hypergryph / GRYPHLINE",
+          "image_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/5e/a4/53/5ea453a8-f819-f42e-aae4-28f21b8c7166/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg"
+        },
+        {
+          "name": "Monster Hunter Outlanders",
+          "description": "TiMi Studio Group / Level Infinite",
+          "image_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/00/73/e0/0073e0c8-a9e4-1956-8966-f83a136ee71e/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg"
+        },
+        {
+          "name": "Neverness to Everness",
+          "description": "Hotta Studio / Perfect World Games",
+          "image_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/cf/a1/4d/cfa14d27-bb1d-7036-4d53-a578181d44f3/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg"
+        },
+        {
+          "name": "Pokémon Champions",
+          "description": "The Pokémon Works / The Pokémon Company",
+          "image_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/f8/d0/6e/f8d06e79-2596-fa0d-33a2-ef92decc5383/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg"
+        },
+        {
+          "name": "Where Winds Meet",
+          "description": "Everstone Studio / NetEase Games",
+          "image_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/7a/51/07/7a5107a1-5fa4-9ed7-86e9-2589bb0ed864/AppIcon-0-0-1x_U007emarketing-0-11-0-85-220.png/512x512bb.jpg"
+        }
+      ]
+    },
+    {
+      "name": "Best Community Support",
+      "display_order": 13,
+      "nominees": [
+        {
+          "name": "Crimson Desert",
+          "description": "Pearl Abyss",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3321460/header.jpg"
+        },
+        {
+          "name": "Helldivers 2",
+          "description": "Arrowhead Game Studios / PlayStation Studios",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/553850/header.jpg"
+        },
+        {
+          "name": "No Man's Sky",
+          "description": "Hello Games",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/275850/header.jpg"
+        },
+        {
+          "name": "The Witcher 3: Wild Hunt",
+          "description": "CD Projekt Red",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/292030/header.jpg"
+        },
+        {
+          "name": "Warframe",
+          "description": "Digital Extremes",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/230410/header.jpg"
+        }
+      ]
+    },
+    {
+      "name": "Innovation in Accessibility",
+      "display_order": 14,
+      "nominees": [
+        {
+          "name": "Assassin's Creed Black Flag Resynced",
+          "description": "Ubisoft Singapore / Ubisoft",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3751950/7599d7fe1b58e0ad5c07e98e8f9f1180dbe19794/capsule_231x87_alt_assets_0.jpg?t=1793391152"
+        },
+        {
+          "name": "Forza Horizon 6",
+          "description": "Playground Games / Xbox Game Studios",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2483190/d0e851e9a3d316fb587984f22d81e6288b2f1485/capsule_231x87_alt_assets_6.jpg?t=1793894652"
+        },
+        {
+          "name": "Gears of War: E-Day",
+          "description": "The Coalition / Xbox Game Studios",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3010850/header.jpg"
+        },
+        {
+          "name": "Marvel's Wolverine",
+          "description": "Insomniac Games / Sony Interactive Entertainment",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/a/aa/X-Menoriginsvideo_game.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        },
+        {
+          "name": "Rhythm Heaven Groove",
+          "description": "Nintendo",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e8/Rhythm_Heaven_Logo.svg/330px-Rhythm_Heaven_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        }
+      ]
+    },
+    {
+      "name": "Best VR / AR Game",
+      "display_order": 15,
+      "nominees": [
+        {
+          "name": "Forefront",
+          "description": "Triangle Factory",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2981220/2df27e20c2e91aa61342f86d2ef157d6708f2c7b/capsule_231x87.jpg?t=1793306914"
+        },
+        {
+          "name": "Into the Radius 2",
+          "description": "CM Immersive",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2307350/header.jpg"
+        },
+        {
+          "name": "Little Nightmares VR: Altered Echoes",
+          "description": "ICONIK / Bandai Namco",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2482940/5f886ebaedbd0873556386f9e176a8e15645c3ef/capsule_231x87.jpg?t=1790693361"
+        },
+        {
+          "name": "Teenage Mutant Ninja Turtles: Empire City",
+          "description": "Cortopia Studios / Beyond Frames",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3713650/514569e989e5b567fa17835a9d09b589a44e341d/capsule_231x87.jpg?t=1789115454"
+        },
+        {
+          "name": "Thief VR: Legacy of Shadow",
+          "description": "Maze Theory / Vertigo Games",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2800080/137303db662776efda2435f6bd6ebc6c72d5f74e/capsule_231x87.jpg?t=1770198880"
+        }
+      ]
+    },
+    {
+      "name": "Best Action Game",
+      "display_order": 16,
+      "nominees": [
+        {
+          "name": "Ace Combat 8: Wings of Theve",
+          "description": "Bandai Namco Aces / Bandai Namco",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2288340/f72b0d0ef7d7beed96998f1ac0bdfb788a01845f/capsule_231x87.jpg?t=1794887021"
+        },
+        {
+          "name": "Gears of War: E-Day",
+          "description": "The Coalition / Xbox Game Studios",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3010850/header.jpg"
+        },
+        {
+          "name": "Onimusha: Way of the Sword",
+          "description": "Capcom",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2638890/header.jpg"
+        },
+        {
+          "name": "Phantom Blade Zero",
+          "description": "S-GAME",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4115450/aef06490c9a4ad912142fe3b766ee08a2b38ef80/capsule_231x87.jpg?t=1793261976"
+        },
+        {
+          "name": "Saros",
+          "description": "Housemarque / Sony Interactive Entertainment",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/9/95/Saros_cover_art.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        }
+      ]
+    },
+    {
+      "name": "Best Action/Adventure Game",
+      "display_order": 17,
+      "nominees": [
+        {
+          "name": "007 First Light",
+          "description": "IO Interactive",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3768760/b22c316df2d62a2d1edd8e2bbac3e3d503a09cd9/capsule_231x87_alt_assets_5.jpg?t=1793979129"
+        },
+        {
+          "name": "Control Resonant",
+          "description": "Remedy Entertainment / Annapurna",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3669870/867a73afa5f21c28aaa14e9b0a4d895c540d4a0c/capsule_231x87.jpg?t=1794822488"
+        },
+        {
+          "name": "Grand Theft Auto VI",
+          "description": "Rockstar Games",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1546990/header.jpg"
+        },
+        {
+          "name": "Pragmata",
+          "description": "Capcom",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3357650/3e7cf55cf72a980ac94cf45d4212e8f0cb566f7f/capsule_231x87.jpg?t=1791454600"
+        },
+        {
+          "name": "Resident Evil Requiem",
+          "description": "Capcom",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3764200/64f506b9b6210df6055136e7017f2082957e5b22/capsule_231x87.jpg?t=1779840172"
+        },
+        {
+          "name": "The Legend of Zelda: Ocarina of Time",
+          "description": "Nintendo",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/en/thumb/5/57/The_Legend_of_Zelda_Ocarina_of_Time.jpg/330px-The_Legend_of_Zelda_Ocarina_of_Time.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        }
+      ]
+    },
+    {
+      "name": "Best Role-Playing Game (RPG)",
+      "display_order": 18,
+      "nominees": [
+        {
+          "name": "Final Fantasy Resonance",
+          "description": "Square Enix",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3259780/6861c59eb09396b7370536d494c1c1f33f684f14/capsule_231x87.jpg?t=1793984485"
+        },
+        {
+          "name": "Fire Emblem: Fortune's Weave",
+          "description": "Intelligent Systems / Nintendo",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/a/af/Fire_Emblem_Fortune%27s_Weave_cover.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        },
+        {
+          "name": "Monster Hunter Stories 3: Twisted Reflection",
+          "description": "Capcom",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2852190/0e9136c2f42fa130b6742b9929267b7188dce255/capsule_231x87.jpg?t=1790900261"
+        },
+        {
+          "name": "The Blood of Dawnwalker",
+          "description": "Rebel Wolves / Bandai Namco",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3751260/9f27869ccdf38981edd24a8b91c5915aefacba4e/capsule_231x87_alt_assets_1.jpg?t=1794911181"
+        },
+        {
+          "name": "Trails in the Sky the Second Chapter",
+          "description": "Nihon Falcom",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/251290/header.jpg"
+        }
+      ]
+    },
+    {
+      "name": "Best Fighting Game",
+      "display_order": 19,
+      "nominees": [
+        {
+          "name": "2XKO",
+          "description": "Riot Games",
+          "image_url": "https://upload.wikimedia.org/wikipedia/commons/8/88/2XKO_game_logo.svg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=original"
+        },
+        {
+          "name": "Avatar Legends: The Fighting Game",
+          "description": "Gameplay Group",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2424420/9918dbc978a3bf749a8549de53a2f699c0ea4001/capsule_231x87.jpg?t=1793830026"
+        },
+        {
+          "name": "Invincible VS",
+          "description": "Quarter Up / Skybound",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2353060/cc34d6912e7e38aef8a40fc7df107379b2a27330/capsule_231x87.jpg?t=1794854337"
+        },
+        {
+          "name": "Marvel Tōkon: Fighting Souls",
+          "description": "Arc System Works / PlayStation Studios",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3787240/59af95e2175fe017802e3fe79588197a52bef6c0/capsule_231x87.jpg?t=1793610312"
+        },
+        {
+          "name": "My Hero Academia: All's Justice",
+          "description": "Bandai Namco",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2362050/b4c5b97bf0e525421a608fc0e972483c66233fa1/capsule_231x87.jpg?t=1788386451"
+        }
+      ]
+    },
+    {
+      "name": "Best Family Game",
+      "display_order": 20,
+      "nominees": [
+        {
+          "name": "Big Walk",
+          "description": "House House / Panic",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1478500/header.jpg"
+        },
+        {
+          "name": "Lego Batman: Legacy of the Dark Knight",
+          "description": "TT Games / Warner Bros.",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2215200/4933722fc48c284f30ea2d0f9eb932c0ab3de1b5/capsule_231x87.jpg?t=1789746326"
+        },
+        {
+          "name": "Nintendo Switch Sports Resort",
+          "description": "Nintendo",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/2/29/Nintendo_Switch_Sports_cover_art.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        },
+        {
+          "name": "Pokémon Pokopia",
+          "description": "Nintendo / The Pokémon Company",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/6/6a/Pok%C3%A9mon_Pokopia_box_art.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        },
+        {
+          "name": "Yoshi and the Mysterious Book",
+          "description": "Nintendo",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/4/47/Yoshi_Book.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        }
+      ]
+    },
+    {
+      "name": "Best Sim/Strategy Game",
+      "display_order": 21,
+      "nominees": [
+        {
+          "name": "Mewgenics",
+          "description": "Edmund McMillen / Tyler Glaiel",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/686060/header.jpg"
+        },
+        {
+          "name": "Planet Zoo 2",
+          "description": "Frontier Developments",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3219030/d4ea06b2e49dbf8c9b3b2f96540613de960b48e1/capsule_231x87.jpg?t=1793011606"
+        },
+        {
+          "name": "Pokémon Pokopia",
+          "description": "Nintendo / The Pokémon Company",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/6/6a/Pok%C3%A9mon_Pokopia_box_art.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        },
+        {
+          "name": "Slay the Spire 2",
+          "description": "Mega Crit",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2868840/header.jpg"
+        },
+        {
+          "name": "Star Wars: Zero Company",
+          "description": "Bit Reactor / Respawn / EA",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2075800/56484e8832119b4b37b3fa3a6a5ec23209cd835c/capsule_231x87.jpg?t=1790340688"
+        }
+      ]
+    },
+    {
+      "name": "Best Sports/Racing Game",
+      "display_order": 22,
+      "nominees": [
+        {
+          "name": "EA Sports FC 27",
+          "description": "EA Sports",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4080220/b2e806003c348d3348774cddb10e5b31cd787ecf/capsule_231x87.jpg?t=1793610006"
+        },
+        {
+          "name": "Forza Horizon 6",
+          "description": "Playground Games / Xbox Game Studios",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2483190/d0e851e9a3d316fb587984f22d81e6288b2f1485/capsule_231x87_alt_assets_6.jpg?t=1793894652"
+        },
+        {
+          "name": "Nintendo Switch Sports Resort",
+          "description": "Nintendo",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/2/29/Nintendo_Switch_Sports_cover_art.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        },
+        {
+          "name": "Screamer",
+          "description": "Milestone",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2814990/header.jpg"
+        },
+        {
+          "name": "Star Wars: Galactic Racer",
+          "description": "Fuse Games / Secret Mode",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078430/13ac6002a7cd1c867f8bf2f650101fe9d91ce4f9/capsule_231x87.jpg?t=1791388584"
+        }
+      ]
+    },
+    {
+      "name": "Best Multiplayer Game",
+      "display_order": 23,
+      "nominees": [
+        {
+          "name": "Big Walk",
+          "description": "House House / Panic",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1478500/header.jpg"
+        },
+        {
+          "name": "Call of Duty: Modern Warfare 4",
+          "description": "Infinity Ward / Activision",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4435490/50d218e79ead2650bc6b7360995cc8dd3fbe2c29/capsule_231x87.jpg?t=1794873974"
+        },
+        {
+          "name": "Gears of War: E-Day",
+          "description": "The Coalition / Xbox Game Studios",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3010850/header.jpg"
+        },
+        {
+          "name": "Marathon",
+          "description": "Bungie",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3065800/header.jpg"
+        },
+        {
+          "name": "Meccha Chameleon",
+          "description": "Indie",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4704690/18d14b8bd834e30a6a25df5ccd7f0a6e644f1577/capsule_231x87.jpg?t=1789464996"
+        },
+        {
+          "name": "Orbitals",
+          "description": "Shapefarm / Kepler",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/1/1b/Orbitals_cover_art.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=original"
+        }
+      ]
+    },
+    {
+      "name": "Best Adaptation",
+      "display_order": 24,
+      "nominees": [
+        {
+          "name": "Cyberpunk: Edgerunners 2",
+          "description": "Studio Trigger / CD Projekt Red / Netflix",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/a/a1/Cyberpunk_Edgerunners_poster.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        },
+        {
+          "name": "Fallout (Season 2)",
+          "description": "Kilter Films / Bethesda / Amazon MGM Studios",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ee/Fallout_television_series_logo.svg/330px-Fallout_television_series_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "Mortal Kombat II",
+          "description": "New Line Cinema / Warner Bros. Pictures",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/9/9a/Mortal_Kombat_II_%28film%29_poster.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        },
+        {
+          "name": "Resident Evil",
+          "description": "Constantin Film / PlayStation Productions",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/3/3c/Resident_Evil_2026_film_poster.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        },
+        {
+          "name": "The Super Mario Galaxy Movie",
+          "description": "Illumination / Nintendo / Universal Pictures",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/4/44/The_Super_Mario_Bros._Movie_poster.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        }
+      ]
+    },
+    {
+      "name": "Most Anticipated Game",
+      "display_order": 25,
+      "nominees": [
+        {
+          "name": "Fable",
+          "description": "Playground Games / Xbox Game Studios",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2769570/header.jpg"
+        },
+        {
+          "name": "Final Fantasy VII Revelation",
+          "description": "Square Enix",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4354570/b881adcc158358729951620a75c804d213f41141/capsule_231x87.jpg?t=1793980510"
+        },
+        {
+          "name": "God of War: Laufey",
+          "description": "Sony Santa Monica / Sony Interactive Entertainment",
+          "image_url": "https://upload.wikimedia.org/wikipedia/en/0/0b/God_of_War_Laufey_cover.webp?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled"
+        },
+        {
+          "name": "Resident Evil Veronica",
+          "description": "Capcom",
+          "image_url": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4824610/b83506b2661f74b639044f4b2000c36f6b529294/capsule_231x87.jpg?t=1780990195"
+        },
+        {
+          "name": "The Witcher 4",
+          "description": "CD Projekt Red",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1288440/header.jpg"
+        }
+      ]
+    },
+    {
+      "name": "Content Creator of the Year",
+      "display_order": 26,
+      "nominees": [
+        {
+          "name": "@CDawgVA",
+          "description": "Cdawg",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/94/CDawgVA%2C_2023.jpg/330px-CDawgVA%2C_2023.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "@cellbit",
+          "description": "Cellbit",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/af/Cellbit_com_seu_cachorrinho_%28Eredin%29.png/330px-Cellbit_com_seu_cachorrinho_%28Eredin%29.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "@ishowspeedsui",
+          "description": "IShowSpeed",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ea/IShowSpeed_at_Chinatown_%28Portrait%29_04.jpg/330px-IShowSpeed_at_Chinatown_%28Portrait%29_04.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "@lilsimsie",
+          "description": "LilSimsie",
+          "image_url": null
+        },
+        {
+          "name": "@ohnePixel",
+          "description": "OhnePixel",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/OhnePixel_%28Mark_Zimmermann%29_on_August_20%2C_2026.png/330px-OhnePixel_%28Mark_Zimmermann%29_on_August_20%2C_2026.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        }
+      ]
+    },
+    {
+      "name": "Best User Creation",
+      "display_order": 27,
+      "nominees": [
+        {
+          "name": "A Dream of Silence: Revamped",
+          "description": "Baldur's Gate 3",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1086940/header.jpg"
+        },
+        {
+          "name": "Create Aeronautics",
+          "description": "Minecraft",
+          "image_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/fb/a7/be/fba7bef5-248f-e255-da11-dd06a30e3828/AppIcon-0-0-1x_U007emarketing-0-10-0-85-220.png/512x512bb.jpg"
+        },
+        {
+          "name": "NoPixel V",
+          "description": "Grand Theft Auto Online",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/3240220/header.jpg"
+        },
+        {
+          "name": "Star Wars Droid Tycoon",
+          "description": "Fortnite",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7c/Fortnite_F_lettermark_logo.png/330px-Fortnite_F_lettermark_logo.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "TTK Testing",
+          "description": "Roblox",
+          "image_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/af/39/ac/af39ac28-cd59-c83b-6aec-7d4d0b3ca191/AppIcon-0-0-1x_U007epad-0-1-0-85-220.png/512x512bb.jpg"
+        }
+      ]
+    },
+    {
+      "name": "Best Esports Game",
+      "display_order": 28,
+      "nominees": [
+        {
+          "name": "Counter-Strike 2",
+          "description": "Valve",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/730/header.jpg"
+        },
+        {
+          "name": "Dota 2",
+          "description": "Valve",
+          "image_url": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/570/header.jpg"
+        },
+        {
+          "name": "League of Legends",
+          "description": "Riot Games",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d8/League_of_Legends_2019_vector.svg/330px-League_of_Legends_2019_vector.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "Mobile Legends: Bang Bang",
+          "description": "Moonton",
+          "image_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/11/2c/17/112c17b5-3220-e5c5-85a5-437ee5a14b6c/AppIcon-0-0-1x_U007emarketing-0-7-0-85-220.png/512x512bb.jpg"
+        },
+        {
+          "name": "Valorant",
+          "description": "Riot Games",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/Valorant_logo_-_pink_color_version.svg/330px-Valorant_logo_-_pink_color_version.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        }
+      ]
+    },
+    {
+      "name": "Best Esports Athlete",
+      "display_order": 29,
+      "nominees": [
+        {
+          "name": "Chovy",
+          "description": "Gen.G · League of Legends",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/50/Chovy_MSI_2025.jpg/330px-Chovy_MSI_2025.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "Donk",
+          "description": "Team Spirit · Counter-Strike 2",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fe/Team_spirit_19.01.202531303_%D0%BA%D0%BE%D0%BF%D0%B8%D1%8F_%28cropped%29.jpg/330px-Team_spirit_19.01.202531303_%D0%BA%D0%BE%D0%BF%D0%B8%D1%8F_%28cropped%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "Erde",
+          "description": "LOUD · Valorant",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/LOUD_logo.svg/330px-LOUD_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "Yatoro",
+          "description": "Team Spirit · Dota 2",
+          "image_url": null
+        },
+        {
+          "name": "ZywOo",
+          "description": "Team Vitality · Counter-Strike 2",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/38/Zywoo_in_2022_%28cropped%29.jpg/330px-Zywoo_in_2022_%28cropped%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        }
+      ]
+    },
+    {
+      "name": "Best Esports Team",
+      "display_order": 30,
+      "nominees": [
+        {
+          "name": "Gen.G",
+          "description": "League of Legends",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Gen.G_Logo.svg/330px-Gen.G_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "LOUD",
+          "description": "Valorant",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9f/LOUD_logo.svg/330px-LOUD_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "Team Falcons (Counter-Strike 2)",
+          "description": "Counter-Strike 2",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/4d/Team_Falcons_Logo.svg/330px-Team_Falcons_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "Team Falcons (Rocket League)",
+          "description": "Rocket League",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/4d/Team_Falcons_Logo.svg/330px-Team_Falcons_Logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "Team Spirit",
+          "description": "Dota 2",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f5/Team_Spirit_new_em.svg/330px-Team_Spirit_new_em.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        },
+        {
+          "name": "Team Vitality",
+          "description": "Counter-Strike 2",
+          "image_url": "https://thumb.wikimedia.org/wikipedia/en/thumb/4/49/Team_Vitality_logo.svg/330px-Team_Vitality_logo.svg.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail"
+        }
+      ]
+    }
+  ]
+}

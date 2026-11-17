@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { initDatabase } from '../server/db.js';
 import { createApp } from '../server/app.js';
+import { parseTextInput } from '../scripts/fetch-nominees.mjs';
 
 describe('TGA Winners API End-to-End', () => {
   let server;
@@ -276,5 +277,69 @@ describe('TGA Winners API End-to-End', () => {
     assert.equal(spaRes.status, 200);
     const spaHtml = await spaRes.text();
     assert.ok(spaHtml.includes('TGA Winners'));
+
+    // 13. Importador JSON: reaproveita categorias existentes e cria novas + indicados sem duplicar
+    const importRes1 = await fetch(`${baseUrl}/api/admin/editions/${ed2025.id}/import-json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
+      body: JSON.stringify({
+        schema: 'tga-winners-import/v1',
+        year: 2025,
+        categories: [
+          {
+            name: 'Game of the Year', // já existe na edição 2025
+            nominees: [
+              { name: 'Clair Obscur: Expedition 33', description: 'Sandfall Interactive', image_url: null },
+              { name: 'Hades II', description: 'Supergiant Games', image_url: 'https://example.com/hades2.jpg' },
+            ],
+          },
+          {
+            name: 'Best Indie Game', // nova categoria
+            nominees: [
+              { name: 'Blue Prince', description: 'Dogubomb', image_url: 'https://example.com/bp.jpg' },
+            ],
+          },
+        ],
+      }),
+    });
+    assert.equal(importRes1.status, 200);
+    const importData1 = await importRes1.json();
+    assert.equal(importData1.categories_created, 1);
+    assert.equal(importData1.categories_reused, 1);
+    assert.equal(importData1.nominees_created, 3);
+
+    // Reimportar com imagem preenchida em Clair Obscur e um novo indicado -> atualiza imagem sem duplicar
+    const importRes2 = await fetch(`${baseUrl}/api/admin/editions/${ed2025.id}/import-json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
+      body: JSON.stringify({
+        categories: [
+          {
+            name: 'game of the year', // case-insensitive match
+            nominees: [
+              { name: 'Clair Obscur: Expedition 33', description: 'Sandfall Interactive', image_url: 'https://example.com/e33.jpg' },
+              { name: 'Hades II', description: 'Supergiant Games', image_url: 'https://example.com/hades2.jpg' },
+              { name: 'Silksong', description: 'Team Cherry', image_url: 'https://example.com/silksong.jpg' },
+            ],
+          },
+        ],
+      }),
+    });
+    assert.equal(importRes2.status, 200);
+    const importData2 = await importRes2.json();
+    assert.equal(importData2.categories_created, 0);
+    assert.equal(importData2.categories_reused, 1);
+    assert.equal(importData2.nominees_created, 1);
+    assert.equal(importData2.nominees_updated, 1);
+    assert.equal(importData2.nominees_skipped, 1);
+
+    // 14. Parser de texto genérico para o script anual
+    const parsedTxt = parseTextInput(
+      `# Game of the Year\n- Jogo X | Studio X\n# Best Performance\n- Ator Y | Jogo X [person]\n`,
+      2027
+    );
+    assert.equal(parsedTxt.year, 2027);
+    assert.equal(parsedTxt.categories.length, 2);
+    assert.equal(parsedTxt.categories[1].nominees[0].kind, 'person');
   });
 });

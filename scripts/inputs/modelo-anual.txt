@@ -1,0 +1,24 @@
+# Modelo de entrada para o script anual (ex: tga-2027.txt)
+# Uso: node scripts/fetch-nominees.mjs --input scripts/inputs/tga-2027.txt --year 2027
+#
+# Regras:
+# - Categorias começam com "#" ou "##"
+# - Indicados começam com "-" ou "*"
+# - Opcionalmente separe a descrição/estúdio com "|" ou "—"
+# - Tags opcionais no final para melhorar a busca de imagem:
+#   [person] (atores, streamers, pro players)
+#   [mobile] (jogos mobile / app stores)
+#   [media]  (séries, filmes, times de esports)
+
+# Game of the Year
+- Exemplo Jogo A | Estúdio X
+- Exemplo Jogo B | Estúdio Y
+
+# Best Performance
+- Nome do Ator | Nome do Jogo [person]
+
+# Best Mobile Game
+- Nome do Jogo Mobile | Estúdio [mobile]
+
+# Best Adaptation
+- Nome da Série ou Filme | Plataforma [media]

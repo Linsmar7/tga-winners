@@ -322,6 +322,131 @@ router.post('/editions/:id/import-categories', (req, res) => {
   return res.json({ imported_count: added });
 });
 
+router.post('/editions/:id/import-json', (req, res) => {
+  const db = getDb();
+  const targetId = Number(req.params.id);
+  const target = db.prepare('SELECT * FROM editions WHERE id = ?').get(targetId);
+  if (!target) {
+    return res.status(404).json({ error: 'Edição destino não encontrada.' });
+  }
+
+  const rawCategories = Array.isArray(req.body?.categories)
+    ? req.body.categories
+    : Array.isArray(req.body)
+      ? req.body
+      : null;
+
+  if (!rawCategories || rawCategories.length === 0) {
+    return res
+      .status(400)
+      .json({ error: 'JSON inválido: informe uma lista não vazia em "categories".' });
+  }
+
+  const existingCategories = db
+    .prepare('SELECT id, name, display_order FROM categories WHERE edition_id = ?')
+    .all(targetId);
+  const categoryByKey = new Map(
+    existingCategories.map((c) => [c.name.trim().toLowerCase(), c])
+  );
+
+  let nextOrder =
+    existingCategories.reduce((max, c) => Math.max(max, Number(c.display_order) || 0), 0) + 1;
+
+  const insertCategoryStmt = db.prepare(
+    'INSERT INTO categories (edition_id, name, display_order) VALUES (?, ?, ?)'
+  );
+  const selectNomineesStmt = db.prepare(
+    'SELECT id, name, description, image_url FROM nominees WHERE category_id = ?'
+  );
+  const insertNomineeStmt = db.prepare(
+    'INSERT INTO nominees (category_id, name, description, image_url, is_winner) VALUES (?, ?, ?, ?, 0)'
+  );
+  const updateNomineeStmt = db.prepare(
+    'UPDATE nominees SET description = ?, image_url = ? WHERE id = ?'
+  );
+
+  const importTx = db.transaction(() => {
+    let categoriesCreated = 0;
+    let categoriesReused = 0;
+    let nomineesCreated = 0;
+    let nomineesUpdated = 0;
+    let nomineesSkipped = 0;
+
+    for (const rawCat of rawCategories) {
+      const catName = typeof rawCat?.name === 'string' ? rawCat.name.trim() : '';
+      if (!catName) continue;
+
+      const catKey = catName.toLowerCase();
+      let category = categoryByKey.get(catKey);
+
+      if (category) {
+        categoriesReused += 1;
+      } else {
+        const order =
+          rawCat?.display_order !== undefined && rawCat?.display_order !== null
+            ? Number(rawCat.display_order) || nextOrder++
+            : nextOrder++;
+        const info = insertCategoryStmt.run(targetId, catName, order);
+        category = { id: Number(info.lastInsertRowid), name: catName, display_order: order };
+        categoryByKey.set(catKey, category);
+        categoriesCreated += 1;
+      }
+
+      const rawNominees = Array.isArray(rawCat?.nominees) ? rawCat.nominees : [];
+      const existingNominees = selectNomineesStmt.all(category.id);
+      const nomineeByKey = new Map(
+        existingNominees.map((n) => [n.name.trim().toLowerCase(), n])
+      );
+
+      for (const rawNom of rawNominees) {
+        const nomName = typeof rawNom?.name === 'string' ? rawNom.name.trim() : '';
+        if (!nomName) continue;
+
+        const description =
+          typeof rawNom?.description === 'string' ? rawNom.description.trim() || null : null;
+        const imageUrl =
+          typeof rawNom?.image_url === 'string' ? rawNom.image_url.trim() || null : null;
+
+        const nomKey = nomName.toLowerCase();
+        const existingNom = nomineeByKey.get(nomKey);
+
+        if (existingNom) {
+          const nextDesc = existingNom.description || description;
+          const nextImg = existingNom.image_url || imageUrl;
+          if (nextDesc !== existingNom.description || nextImg !== existingNom.image_url) {
+            updateNomineeStmt.run(nextDesc, nextImg, existingNom.id);
+            existingNom.description = nextDesc;
+            existingNom.image_url = nextImg;
+            nomineesUpdated += 1;
+          } else {
+            nomineesSkipped += 1;
+          }
+        } else {
+          const nomInfo = insertNomineeStmt.run(category.id, nomName, description, imageUrl);
+          nomineeByKey.set(nomKey, {
+            id: Number(nomInfo.lastInsertRowid),
+            name: nomName,
+            description,
+            image_url: imageUrl,
+          });
+          nomineesCreated += 1;
+        }
+      }
+    }
+
+    return {
+      ok: true,
+      categories_created: categoriesCreated,
+      categories_reused: categoriesReused,
+      nominees_created: nomineesCreated,
+      nominees_updated: nomineesUpdated,
+      nominees_skipped: nomineesSkipped,
+    };
+  });
+
+  return res.json(importTx());
+});
+
 // --- Categories ---
 
 router.get('/editions/:id/categories', (req, res) => {
