@@ -2,154 +2,69 @@ import express from 'express';
 import crypto from 'node:crypto';
 import { getDb } from '../db.js';
 import { readUserFromReq, requireUser } from '../middleware/auth.js';
-import { buildVoterDetails, computeRankingAndStats } from '../scoring.js';
+import { formatEdition, formatSideBet, getClientContext } from '../lib/mappers.js';
+import {
+  buildAllTimeHistory,
+  findActiveOrLatestEdition,
+  findEditionByYear,
+  getEditionCategoriesAndNominees,
+  getEditionFullData,
+  getEditionScoringInputs,
+  getVoterVotes,
+  listAllEditionsSummary,
+} from '../services/editionService.js';
+import { buildHeadToHead, buildVoterDetails, computeRankingAndStats } from '../scoring.js';
+import { registerSseClient } from '../sse.js';
 
 const router = express.Router();
 
-function formatEdition(row) {
-  if (!row) return null;
-  return {
-    ...row,
-    is_finished: Boolean(row.is_finished),
-  };
-}
-
-function formatNominee(row) {
-  if (!row) return null;
-  return {
-    ...row,
-    is_winner: Boolean(row.is_winner),
-  };
-}
-
-function getClientIp(req) {
-  const xff = req.headers['x-forwarded-for'];
-  if (typeof xff === 'string' && xff.trim()) {
-    return xff.split(',')[0].trim();
-  }
-  return req.ip || req.socket?.remoteAddress || '';
-}
-
-function getClientContext(req) {
-  const ipAddress = getClientIp(req);
-  const userAgent =
-    typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'].slice(0, 500) : '';
-  const deviceFingerprint =
-    typeof req.headers['x-device-fingerprint'] === 'string'
-      ? req.headers['x-device-fingerprint'].slice(0, 255)
-      : '';
-
-  return { ipAddress, userAgent, deviceFingerprint };
-}
-
-function findEditionByParam(db, yearParam) {
-  const num = Number(yearParam);
-  if (!Number.isInteger(num)) return null;
-  return db.prepare('SELECT * FROM editions WHERE year = ?').get(num) || null;
-}
-
-function getEditionFullData(db, edition) {
-  const categories = db
-    .prepare('SELECT * FROM categories WHERE edition_id = ? ORDER BY display_order ASC, id ASC')
-    .all(edition.id);
-
-  const nominees = db
-    .prepare(
-      `SELECT n.* FROM nominees n
-       INNER JOIN categories c ON c.id = n.category_id
-       WHERE c.edition_id = ?
-       ORDER BY n.id ASC`
-    )
-    .all(edition.id)
-    .map(formatNominee);
-
-  const nomineesByCat = new Map();
-  for (const n of nominees) {
-    if (!nomineesByCat.has(n.category_id)) nomineesByCat.set(n.category_id, []);
-    nomineesByCat.get(n.category_id).push(n);
-  }
-
-  const enrichedCategories = categories.map((cat) => ({
-    ...cat,
-    nominees: nomineesByCat.get(cat.id) || [],
-  }));
-
-  const votersCount = db
-    .prepare('SELECT COUNT(*) AS cnt FROM voters WHERE edition_id = ?')
-    .get(edition.id).cnt;
-
-  const decidedCount = nominees.filter((n) => n.is_winner).length;
-
-  return {
-    edition: formatEdition(edition),
-    categories: enrichedCategories,
-    summary: {
-      total_voters: votersCount,
-      total_categories: categories.length,
-      decided_categories: decidedCount,
-    },
-  };
-}
-
 router.get('/editions', (req, res) => {
   const db = getDb();
-  const rows = db
-    .prepare(
-      `SELECT e.*,
-        (SELECT COUNT(*) FROM categories c WHERE c.edition_id = e.id) AS categories_count,
-        (SELECT COUNT(*) FROM voters v WHERE v.edition_id = e.id) AS voters_count
-       FROM editions e
-       ORDER BY e.year DESC`
-    )
-    .all();
-
-  res.json({ editions: rows.map(formatEdition) });
+  return res.json({ editions: listAllEditionsSummary(db) });
 });
 
 router.get('/editions/active', (req, res) => {
   const db = getDb();
-  const editions = db.prepare('SELECT * FROM editions ORDER BY year DESC').all();
-  if (editions.length === 0) {
-    return res.json({ edition: null, categories: [], summary: null });
+  const active = findActiveOrLatestEdition(db);
+  if (!active) {
+    return res.json({ edition: null, editions: [], categories: [], side_bets: [], summary: null });
   }
-
-  const now = Date.now();
-  const currentlyOpen = editions.find((e) => {
-    const start = new Date(e.voting_start).getTime();
-    const end = new Date(e.voting_end).getTime();
-    return now >= start && now < end;
-  });
-
-  const active = currentlyOpen || editions[0];
   return res.json(getEditionFullData(db, active));
 });
 
 router.get('/editions/:year', (req, res) => {
   const db = getDb();
-  const edition = findEditionByParam(db, req.params.year);
+  const edition = findEditionByYear(db, req.params.year);
   if (!edition) {
     return res.status(404).json({ error: 'Edição não encontrada' });
   }
   return res.json(getEditionFullData(db, edition));
 });
 
+router.get('/editions/:year/stream', (req, res) => {
+  const db = getDb();
+  const edition = findEditionByYear(db, req.params.year);
+  if (!edition) {
+    return res.status(404).json({ error: 'Edição não encontrada' });
+  }
+  return registerSseClient(edition.year, req, res);
+});
+
 router.get('/editions/:year/my-votes', (req, res) => {
   const db = getDb();
-  const edition = findEditionByParam(db, req.params.year);
+  const edition = findEditionByYear(db, req.params.year);
   if (!edition) {
     return res.status(404).json({ error: 'Edição não encontrada' });
   }
 
   const authUser = readUserFromReq(req);
   if (!authUser) {
-    return res.json({ user: null, voter: null, votes: [] });
+    return res.json({ user: null, voter: null, votes: [], side_bet_votes: [] });
   }
 
-  const dbUser = db
-    .prepare('SELECT id, username FROM users WHERE id = ?')
-    .get(authUser.id);
+  const dbUser = db.prepare('SELECT id, username FROM users WHERE id = ?').get(authUser.id);
   if (!dbUser) {
-    return res.json({ user: null, voter: null, votes: [] });
+    return res.json({ user: null, voter: null, votes: [], side_bet_votes: [] });
   }
 
   const voter =
@@ -158,13 +73,17 @@ router.get('/editions/:year/my-votes', (req, res) => {
       .get(edition.id, dbUser.id) || null;
 
   if (!voter) {
-    return res.json({ user: dbUser, voter: null, votes: [] });
+    return res.json({ user: dbUser, voter: null, votes: [], side_bet_votes: [] });
   }
 
   const votes = db
     .prepare(
       'SELECT category_id, will_win_nominee_id, want_win_nominee_id FROM votes WHERE voter_id = ?'
     )
+    .all(voter.id);
+
+  const sideBetVotes = db
+    .prepare('SELECT side_bet_id, selected_option FROM side_bet_votes WHERE voter_id = ?')
     .all(voter.id);
 
   return res.json({
@@ -175,19 +94,18 @@ router.get('/editions/:year/my-votes', (req, res) => {
       updated_at: voter.updated_at,
     },
     votes,
+    side_bet_votes: sideBetVotes,
   });
 });
 
 router.post('/editions/:year/votes', requireUser, (req, res) => {
   const db = getDb();
-  const edition = findEditionByParam(db, req.params.year);
+  const edition = findEditionByYear(db, req.params.year);
   if (!edition) {
     return res.status(404).json({ error: 'Edição não encontrada' });
   }
 
-  const dbUser = db
-    .prepare('SELECT id, username FROM users WHERE id = ?')
-    .get(req.user.id);
+  const dbUser = db.prepare('SELECT id, username FROM users WHERE id = ?').get(req.user.id);
   if (!dbUser) {
     return res.status(401).json({ error: 'Sessão inválida. Faça login novamente.' });
   }
@@ -204,9 +122,10 @@ router.post('/editions/:year/votes', requireUser, (req, res) => {
   }
 
   const rawVotes = Array.isArray(req.body?.votes) ? req.body.votes : [];
+  const hasSideBetPayload = Array.isArray(req.body?.side_bet_votes);
+  const rawSideBetVotes = hasSideBetPayload ? req.body.side_bet_votes : [];
   const ctx = getClientContext(req);
 
-  // Verifica validade de categorias e indicados
   const editionCategories = db
     .prepare('SELECT id FROM categories WHERE edition_id = ?')
     .all(edition.id);
@@ -228,10 +147,8 @@ router.post('/editions/:year/votes', requireUser, (req, res) => {
       return res.status(400).json({ error: `Categoria inválida: ${item?.category_id}` });
     }
 
-    const willWinId =
-      item?.will_win_nominee_id != null ? Number(item.will_win_nominee_id) : null;
-    const wantWinId =
-      item?.want_win_nominee_id != null ? Number(item.want_win_nominee_id) : null;
+    const willWinId = item?.will_win_nominee_id != null ? Number(item.will_win_nominee_id) : null;
+    const wantWinId = item?.want_win_nominee_id != null ? Number(item.want_win_nominee_id) : null;
 
     if (willWinId !== null && nomineeCategoryMap.get(willWinId) !== categoryId) {
       return res.status(400).json({ error: 'Indicado inválido para "Vai Ganhar".' });
@@ -246,6 +163,29 @@ router.post('/editions/:year/votes', requireUser, (req, res) => {
         will_win_nominee_id: willWinId,
         want_win_nominee_id: wantWinId,
       });
+    }
+  }
+
+  const editionSideBets = db
+    .prepare('SELECT * FROM side_bets WHERE edition_id = ?')
+    .all(edition.id)
+    .map(formatSideBet);
+  const sideBetById = new Map(editionSideBets.map((sb) => [sb.id, sb]));
+
+  const normalizedSideBetVotes = [];
+  if (hasSideBetPayload) {
+    for (const item of rawSideBetVotes) {
+      const sbId = Number(item?.side_bet_id);
+      const option = typeof item?.selected_option === 'string' ? item.selected_option.trim() : '';
+      if (!option) continue;
+      const sb = sideBetById.get(sbId);
+      if (!sb) {
+        return res.status(400).json({ error: `Palpite extra inválido: ${item?.side_bet_id}` });
+      }
+      if (!sb.options.includes(option)) {
+        return res.status(400).json({ error: `Opção inválida para "${sb.question}".` });
+      }
+      normalizedSideBetVotes.push({ side_bet_id: sbId, selected_option: option });
     }
   }
 
@@ -298,15 +238,28 @@ router.post('/editions/:year/votes', requireUser, (req, res) => {
       `INSERT INTO votes (voter_id, category_id, will_win_nominee_id, want_win_nominee_id)
        VALUES (?, ?, ?, ?)`
     );
-
     for (const v of normalizedVotes) {
       insertVote.run(voterId, v.category_id, v.will_win_nominee_id, v.want_win_nominee_id);
+    }
+
+    if (hasSideBetPayload) {
+      db.prepare('DELETE FROM side_bet_votes WHERE voter_id = ?').run(voterId);
+      const insertSb = db.prepare(
+        `INSERT INTO side_bet_votes (voter_id, side_bet_id, selected_option)
+         VALUES (?, ?, ?)`
+      );
+      for (const sv of normalizedSideBetVotes) {
+        insertSb.run(voterId, sv.side_bet_id, sv.selected_option);
+      }
     }
 
     return voterId;
   });
 
   const voterId = saveTransaction();
+  const savedSideBetVotes = db
+    .prepare('SELECT side_bet_id, selected_option FROM side_bet_votes WHERE voter_id = ?')
+    .all(voterId);
 
   return res.json({
     voter: {
@@ -315,47 +268,74 @@ router.post('/editions/:year/votes', requireUser, (req, res) => {
       updated_at: nowIso,
     },
     votes: normalizedVotes,
+    side_bet_votes: savedSideBetVotes,
   });
 });
 
 router.get('/editions/:year/ranking', (req, res) => {
   const db = getDb();
-  const edition = findEditionByParam(db, req.params.year);
+  const edition = findEditionByYear(db, req.params.year);
   if (!edition) {
     return res.status(404).json({ error: 'Edição não encontrada' });
   }
 
-  const categories = db
-    .prepare('SELECT * FROM categories WHERE edition_id = ? ORDER BY display_order ASC, id ASC')
-    .all(edition.id);
-  const nominees = db
-    .prepare(
-      `SELECT n.* FROM nominees n
-       INNER JOIN categories c ON c.id = n.category_id
-       WHERE c.edition_id = ?`
-    )
-    .all(edition.id)
-    .map(formatNominee);
-  const voters = db.prepare('SELECT * FROM voters WHERE edition_id = ?').all(edition.id);
-  const votes = db
-    .prepare(
-      `SELECT vt.* FROM votes vt
-       INNER JOIN voters vr ON vr.id = vt.voter_id
-       WHERE vr.edition_id = ?`
-    )
-    .all(edition.id);
-
-  const computed = computeRankingAndStats({ categories, nominees, voters, votes });
+  const inputs = getEditionScoringInputs(db, edition.id);
+  const computed = computeRankingAndStats(inputs);
 
   return res.json({
     edition: formatEdition(edition),
+    editions: listAllEditionsSummary(db),
     ...computed,
   });
 });
 
+router.get('/editions/:year/simulation-data', (req, res) => {
+  const db = getDb();
+  const edition = findEditionByYear(db, req.params.year);
+  if (!edition) {
+    return res.status(404).json({ error: 'Edição não encontrada' });
+  }
+
+  const { categories, nominees, voters, votes, sideBets, sideBetVotes } = getEditionScoringInputs(
+    db,
+    edition.id
+  );
+
+  return res.json({
+    edition: formatEdition(edition),
+    categories: categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      display_order: c.display_order,
+      points_weight: Number(c.points_weight) || 5,
+    })),
+    nominees: nominees.map((n) => ({
+      id: n.id,
+      category_id: n.category_id,
+      name: n.name,
+      image_url: n.image_url,
+      is_winner: n.is_winner,
+    })),
+    voters: voters.map((v) => ({ id: v.id, user_id: v.user_id, nickname: v.nickname })),
+    votes: votes.map((v) => ({
+      voter_id: v.voter_id,
+      category_id: v.category_id,
+      will_win_nominee_id: v.will_win_nominee_id,
+      want_win_nominee_id: v.want_win_nominee_id,
+    })),
+    side_bets: sideBets,
+    side_bet_votes: sideBetVotes.map((sv) => ({
+      voter_id: sv.voter_id,
+      side_bet_id: sv.side_bet_id,
+      selected_option: sv.selected_option,
+    })),
+  });
+});
+
+// Palpites sempre públicos/visíveis para todos os participantes
 router.get('/editions/:year/voters/:voterId', (req, res) => {
   const db = getDb();
-  const edition = findEditionByParam(db, req.params.year);
+  const edition = findEditionByYear(db, req.params.year);
   if (!edition) {
     return res.status(404).json({ error: 'Edição não encontrada' });
   }
@@ -368,20 +348,59 @@ router.get('/editions/:year/voters/:voterId', (req, res) => {
     return res.status(404).json({ error: 'Participante não encontrado' });
   }
 
-  const categories = db
-    .prepare('SELECT * FROM categories WHERE edition_id = ? ORDER BY display_order ASC, id ASC')
-    .all(edition.id);
-  const nominees = db
-    .prepare(
-      `SELECT n.* FROM nominees n
-       INNER JOIN categories c ON c.id = n.category_id
-       WHERE c.edition_id = ?`
-    )
-    .all(edition.id)
-    .map(formatNominee);
-  const votes = db.prepare('SELECT * FROM votes WHERE voter_id = ?').all(voter.id);
+  const { categories, nominees, sideBets } = getEditionCategoriesAndNominees(db, edition.id);
+  const { votes, sideBetVotes } = getVoterVotes(db, voter.id);
 
-  return res.json(buildVoterDetails({ voter, categories, nominees, votes }));
+  return res.json(
+    buildVoterDetails({ voter, categories, nominees, votes, sideBets, sideBetVotes })
+  );
+});
+
+router.get('/editions/:year/compare', (req, res) => {
+  const db = getDb();
+  const edition = findEditionByYear(db, req.params.year);
+  if (!edition) {
+    return res.status(404).json({ error: 'Edição não encontrada' });
+  }
+
+  const voterAId = Number(req.query.a);
+  const voterBId = Number(req.query.b);
+  if (!Number.isInteger(voterAId) || !Number.isInteger(voterBId)) {
+    return res.status(400).json({ error: 'Informe dois participantes válidos (a e b).' });
+  }
+
+  const voterA = db
+    .prepare('SELECT * FROM voters WHERE id = ? AND edition_id = ?')
+    .get(voterAId, edition.id);
+  const voterB = db
+    .prepare('SELECT * FROM voters WHERE id = ? AND edition_id = ?')
+    .get(voterBId, edition.id);
+  if (!voterA || !voterB) {
+    return res.status(404).json({ error: 'Participante não encontrado nesta edição.' });
+  }
+
+  const { categories, nominees, sideBets } = getEditionCategoriesAndNominees(db, edition.id);
+  const { votes: votesA, sideBetVotes: sideBetVotesA } = getVoterVotes(db, voterA.id);
+  const { votes: votesB, sideBetVotes: sideBetVotesB } = getVoterVotes(db, voterB.id);
+
+  return res.json(
+    buildHeadToHead({
+      voterA,
+      voterB,
+      categories,
+      nominees,
+      votesA,
+      votesB,
+      sideBets,
+      sideBetVotesA,
+      sideBetVotesB,
+    })
+  );
+});
+
+router.get('/history', (req, res) => {
+  const db = getDb();
+  return res.json(buildAllTimeHistory(db));
 });
 
 export default router;

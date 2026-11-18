@@ -6,12 +6,12 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 COPY . .
 
-# Build do frontend React (Vite)
-RUN npm run build
+# Build do frontend React (Vite) e remove devDependencies para enxugar imagem final
+RUN npm run build && npm prune --omit=dev
 
 FROM node:24-alpine
 

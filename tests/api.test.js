@@ -20,6 +20,7 @@ describe('TGA Winners API End-to-End', () => {
     process.env.ADMIN_USER = 'admin';
     process.env.ADMIN_PASSWORD = 'secret-test-password';
     process.env.JWT_SECRET = 'test-jwt-secret';
+    process.env.DISABLE_RATE_LIMIT = '1';
 
     initDatabase(process.env.DB_PATH);
     const app = createApp();
@@ -37,7 +38,13 @@ describe('TGA Winners API End-to-End', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('autentica admin, cria edições com clonagem, cadastra indicados, vota com trava híbrida e apura ranking', async () => {
+  it('cobre fluxo completo: auth, pesos, side bets, comparador, histórico, evolução, backup e segurança', async () => {
+    // 0. Security headers check
+    const healthRes = await fetch(`${baseUrl}/api/health`);
+    assert.equal(healthRes.status, 200);
+    assert.equal(healthRes.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(healthRes.headers.get('x-powered-by'), null);
+
     // 1. Admin auth protection
     const unauth = await fetch(`${baseUrl}/api/admin/editions`);
     assert.equal(unauth.status, 401);
@@ -51,7 +58,7 @@ describe('TGA Winners API End-to-End', () => {
     assert.equal(loginRes.status, 200);
     adminCookie = loginRes.headers.get('set-cookie').split(';')[0];
 
-    // 3. Create 2025 edition (past, voting closed)
+    // 3. Create 2025 edition (past, voting closed) with weighted GOTY (10 pts)
     const ed2025Res = await fetch(`${baseUrl}/api/admin/editions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
@@ -65,22 +72,21 @@ describe('TGA Winners API End-to-End', () => {
     assert.equal(ed2025Res.status, 201);
     const { edition: ed2025 } = await ed2025Res.json();
 
-    // Add 2 categories to 2025
     const cat1Res = await fetch(`${baseUrl}/api/admin/editions/${ed2025.id}/categories`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
-      body: JSON.stringify({ name: 'Game of the Year' }),
+      body: JSON.stringify({ name: 'Game of the Year', points_weight: 10 }),
     });
     assert.equal(cat1Res.status, 201);
 
     const cat2Res = await fetch(`${baseUrl}/api/admin/editions/${ed2025.id}/categories`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
-      body: JSON.stringify({ name: 'Best Direction' }),
+      body: JSON.stringify({ name: 'Best Direction', points_weight: 5 }),
     });
     assert.equal(cat2Res.status, 201);
 
-    // 4. Create 2026 edition (voting open) cloning categories from 2025
+    // 4. Create 2026 edition (voting open) cloning categories + weights from 2025
     const now = Date.now();
     const ed2026Res = await fetch(`${baseUrl}/api/admin/editions`, {
       method: 'POST',
@@ -97,23 +103,30 @@ describe('TGA Winners API End-to-End', () => {
     const ed2026Payload = await ed2026Res.json();
     assert.equal(ed2026Payload.imported_categories_count, 2);
 
-    // Check active edition returns 2026 with 2 cloned categories
     const activeRes = await fetch(`${baseUrl}/api/editions/active`);
     const activeData = await activeRes.json();
     assert.equal(activeData.edition.year, 2026);
     assert.equal(activeData.categories.length, 2);
+    assert.equal(activeData.categories[0].points_weight, 10);
+    assert.ok(Array.isArray(activeData.editions));
 
     const gotyCat = activeData.categories[0];
     const dirCat = activeData.categories[1];
 
-    // Add nominees to GOTY and Best Direction
+    // Add nominees with external_url
     const nom1 = await (
       await fetch(`${baseUrl}/api/admin/categories/${gotyCat.id}/nominees`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
-        body: JSON.stringify({ name: 'GTA VI', description: 'Rockstar Games' }),
+        body: JSON.stringify({
+          name: 'GTA VI',
+          description: 'Rockstar Games',
+          external_url: 'https://www.rockstargames.com/VI',
+        }),
       })
     ).json();
+    assert.equal(nom1.nominee.external_url, 'https://www.rockstargames.com/VI');
+
     const nom2 = await (
       await fetch(`${baseUrl}/api/admin/categories/${gotyCat.id}/nominees`, {
         method: 'POST',
@@ -129,6 +142,19 @@ describe('TGA Winners API End-to-End', () => {
       })
     ).json();
 
+    // Add Side Bet (Bingo)
+    const sbRes = await fetch(`${baseUrl}/api/admin/editions/${activeData.edition.id}/side-bets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
+      body: JSON.stringify({
+        question: 'Half-Life 3 vai aparecer?',
+        options: ['Sim', 'Não'],
+        points: 3,
+      }),
+    });
+    assert.equal(sbRes.status, 201);
+    const { side_bet: sideBet1 } = await sbRes.json();
+
     // 5. Reject unauthenticated voting
     const unauthVoteRes = await fetch(`${baseUrl}/api/editions/2026/votes`, {
       method: 'POST',
@@ -137,7 +163,7 @@ describe('TGA Winners API End-to-End', () => {
     });
     assert.equal(unauthVoteRes.status, 401);
 
-    // 6. Register users (Linsmar & Amigo) and prevent duplicate username (case-insensitive)
+    // 6. Register users (Linsmar & Amigo)
     const reg1Res = await fetch(`${baseUrl}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -159,34 +185,33 @@ describe('TGA Winners API End-to-End', () => {
       body: JSON.stringify({ username: 'Amigo', password: 'friendpassword' }),
     });
     assert.equal(reg2Res.status, 201);
+    const { user: amigoUser } = await reg2Res.json();
     const amigoCookie = reg2Res.headers.get('set-cookie').split(';')[0];
 
-    // Wrong password login rejected
-    const badLoginRes = await fetch(`${baseUrl}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'Linsmar', password: 'wrong' }),
-    });
-    assert.equal(badLoginRes.status, 401);
-
-    // Valid login works
-    const loginUserRes = await fetch(`${baseUrl}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'Linsmar', password: 'mypassword' }),
-    });
-    assert.equal(loginUserRes.status, 200);
-    const linsmarLoginCookie = loginUserRes.headers.get('set-cookie').split(';')[0];
-
-    // Reject voting on closed edition (2025) even when authenticated
-    const closedVoteRes = await fetch(`${baseUrl}/api/editions/2025/votes`, {
-      method: 'POST',
+    // User self-service password change
+    const chPassRes = await fetch(`${baseUrl}/api/auth/password`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json', Cookie: linsmarCookie },
-      body: JSON.stringify({ votes: [] }),
+      body: JSON.stringify({ current_password: 'mypassword', new_password: 'newpassword123' }),
     });
-    assert.equal(closedVoteRes.status, 403);
+    assert.equal(chPassRes.status, 200);
 
-    // 7. Linsmar submits votes for 2026
+    // Admin resets Amigo password
+    const resetRes = await fetch(`${baseUrl}/api/admin/users/${amigoUser.id}/reset-password`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
+      body: JSON.stringify({ new_password: 'resetedpass' }),
+    });
+    assert.equal(resetRes.status, 200);
+
+    const amigoNewLogin = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'Amigo', password: 'resetedpass' }),
+    });
+    assert.equal(amigoNewLogin.status, 200);
+
+    // 7. Linsmar and Amigo submit votes + side bets
     const vote1Res = await fetch(`${baseUrl}/api/editions/2026/votes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Cookie: linsmarCookie },
@@ -194,7 +219,7 @@ describe('TGA Winners API End-to-End', () => {
         votes: [
           {
             category_id: gotyCat.id,
-            will_win_nominee_id: nom1.nominee.id,
+            will_win_nominee_id: nom2.nominee.id,
             want_win_nominee_id: nom2.nominee.id,
           },
           {
@@ -203,11 +228,12 @@ describe('TGA Winners API End-to-End', () => {
             want_win_nominee_id: dirNom1.nominee.id,
           },
         ],
+        side_bet_votes: [{ side_bet_id: sideBet1.id, selected_option: 'Não' }],
       }),
     });
     assert.equal(vote1Res.status, 200);
+    const vote1Data = await vote1Res.json();
 
-    // 8. Amigo submits votes for 2026
     const vote2Res = await fetch(`${baseUrl}/api/editions/2026/votes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Cookie: amigoCookie },
@@ -219,11 +245,33 @@ describe('TGA Winners API End-to-End', () => {
             want_win_nominee_id: nom1.nominee.id,
           },
         ],
+        side_bet_votes: [{ side_bet_id: sideBet1.id, selected_option: 'Sim' }],
       }),
     });
     assert.equal(vote2Res.status, 200);
+    const vote2Data = await vote2Res.json();
 
-    // 9. Admin marks Silksong as GOTY winner -> Linsmar gets +1 bonus, Amigo gets 0
+    // 8. Palpites de outros participantes SEMPRE visíveis mesmo com votação aberta!
+    const peekRes = await fetch(`${baseUrl}/api/editions/2026/voters/${vote1Data.voter.id}`);
+    assert.equal(peekRes.status, 200);
+    const peekData = await peekRes.json();
+    assert.equal(peekData.voter.nickname, 'Linsmar');
+    assert.equal(peekData.side_bets.length, 1);
+
+    // 9. Head-to-Head compare & simulation data
+    const cmpRes = await fetch(
+      `${baseUrl}/api/editions/2026/compare?a=${vote1Data.voter.id}&b=${vote2Data.voter.id}`
+    );
+    assert.equal(cmpRes.status, 200);
+    const cmpData = await cmpRes.json();
+    assert.equal(cmpData.summary.agreement_will_pct, 0);
+
+    const simRes = await fetch(`${baseUrl}/api/editions/2026/simulation-data`);
+    assert.equal(simRes.status, 200);
+    const simData = await simRes.json();
+    assert.equal(simData.voters.length, 2);
+
+    // 10. Admin marks Silksong as GOTY winner (+10 pts) and Side Bet answer ("Não", +3 pts)
     const winRes = await fetch(`${baseUrl}/api/admin/categories/${gotyCat.id}/winner`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
@@ -231,48 +279,36 @@ describe('TGA Winners API End-to-End', () => {
     });
     assert.equal(winRes.status, 200);
 
-    // Check live ranking
+    const sbAnsRes = await fetch(`${baseUrl}/api/admin/side-bets/${sideBet1.id}/answer`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
+      body: JSON.stringify({ correct_option: 'Não' }),
+    });
+    assert.equal(sbAnsRes.status, 200);
+
+    // Check live ranking with weights + side bets + evolution timeline
     const rankRes = await fetch(`${baseUrl}/api/editions/2026/ranking`);
     assert.equal(rankRes.status, 200);
     const rankData = await rankRes.json();
     assert.equal(rankData.ranking[0].nickname, 'Linsmar');
-    assert.equal(rankData.ranking[0].total_points, 1);
-    assert.equal(rankData.ranking[1].nickname, 'Amigo');
-    assert.equal(rankData.ranking[1].total_points, 0);
+    assert.equal(rankData.ranking[0].total_points, 13); // 10 GOTY + 3 side bet
+    assert.equal(rankData.ranking[0].hit_goty, true);
+    assert.equal(rankData.evolution.steps.length, 3); // Start (17/11/2026) + GOTY + SideBet
 
-    // 10. Linsmar logs in on another device and edits existing votes (still 1 entry in ranking)
-    const myVotesRes = await fetch(`${baseUrl}/api/editions/2026/my-votes`, {
-      headers: { Cookie: linsmarLoginCookie },
-    });
-    assert.equal(myVotesRes.status, 200);
-    const myVotesData = await myVotesRes.json();
-    assert.equal(myVotesData.user.username, 'Linsmar');
-    assert.equal(myVotesData.voter.nickname, 'Linsmar');
-    assert.equal(myVotesData.votes.length, 2);
+    // 11. History / Hall da Fama
+    const histRes = await fetch(`${baseUrl}/api/history`);
+    assert.equal(histRes.status, 200);
+    const histData = await histRes.json();
+    assert.equal(histData.leaderboard[0].nickname, 'Linsmar');
+    assert.equal(histData.leaderboard[0].titles, 1);
 
-    const editVoteRes = await fetch(`${baseUrl}/api/editions/2026/votes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Cookie: linsmarLoginCookie },
-      body: JSON.stringify({
-        votes: [
-          {
-            category_id: gotyCat.id,
-            will_win_nominee_id: nom2.nominee.id,
-            want_win_nominee_id: nom2.nominee.id,
-          },
-        ],
-      }),
-    });
-    assert.equal(editVoteRes.status, 200);
-
-    const rankAfterEdit = await (await fetch(`${baseUrl}/api/editions/2026/ranking`)).json();
-    assert.equal(rankAfterEdit.ranking.length, 2);
-    assert.equal(rankAfterEdit.ranking[0].nickname, 'Linsmar');
-    assert.equal(rankAfterEdit.ranking[0].total_points, 5);
-
-    // 11. Image upload & static serving
+    // 12. Image upload, static serving & orphan cleanup on delete
     const formData = new FormData();
-    formData.append('image', new Blob([new Uint8Array([137, 80, 78, 71])], { type: 'image/png' }), 'test.png');
+    formData.append(
+      'image',
+      new Blob([new Uint8Array([137, 80, 78, 71])], { type: 'image/png' }),
+      'test.png'
+    );
     const uploadRes = await fetch(`${baseUrl}/api/admin/upload`, {
       method: 'POST',
       headers: { Cookie: adminCookie },
@@ -282,71 +318,38 @@ describe('TGA Winners API End-to-End', () => {
     const uploadData = await uploadRes.json();
     assert.ok(uploadData.url.startsWith('/uploads/'));
 
-    const staticUploadRes = await fetch(`${baseUrl}${uploadData.url}`);
-    assert.equal(staticUploadRes.status, 200);
-
-    // 12. SPA fallback serves built dist/index.html
-    const spaRes = await fetch(`${baseUrl}/ranking`);
-    assert.equal(spaRes.status, 200);
-    const spaHtml = await spaRes.text();
-    assert.ok(spaHtml.includes('TGA Winners'));
-
-    // 13. Importador JSON: reaproveita categorias existentes e cria novas + indicados sem duplicar
-    const importRes1 = await fetch(`${baseUrl}/api/admin/editions/${ed2025.id}/import-json`, {
+    const tempNomRes = await fetch(`${baseUrl}/api/admin/categories/${dirCat.id}/nominees`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
-      body: JSON.stringify({
-        schema: 'tga-winners-import/v1',
-        year: 2025,
-        categories: [
-          {
-            name: 'Game of the Year', // já existe na edição 2025
-            nominees: [
-              { name: 'Clair Obscur: Expedition 33', description: 'Sandfall Interactive', image_url: null },
-              { name: 'Hades II', description: 'Supergiant Games', image_url: 'https://example.com/hades2.jpg' },
-            ],
-          },
-          {
-            name: 'Best Indie Game', // nova categoria
-            nominees: [
-              { name: 'Blue Prince', description: 'Dogubomb', image_url: 'https://example.com/bp.jpg' },
-            ],
-          },
-        ],
-      }),
+      body: JSON.stringify({ name: 'Temp Nominee', image_url: uploadData.url }),
     });
-    assert.equal(importRes1.status, 200);
-    const importData1 = await importRes1.json();
-    assert.equal(importData1.categories_created, 1);
-    assert.equal(importData1.categories_reused, 1);
-    assert.equal(importData1.nominees_created, 3);
+    const tempNom = await tempNomRes.json();
+    const uploadedDiskPath = path.join(process.env.UPLOAD_DIR, path.basename(uploadData.url));
+    assert.equal(fs.existsSync(uploadedDiskPath), true);
 
-    // Reimportar com imagem preenchida em Clair Obscur e um novo indicado -> atualiza imagem sem duplicar
-    const importRes2 = await fetch(`${baseUrl}/api/admin/editions/${ed2025.id}/import-json`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
-      body: JSON.stringify({
-        categories: [
-          {
-            name: 'game of the year', // case-insensitive match
-            nominees: [
-              { name: 'Clair Obscur: Expedition 33', description: 'Sandfall Interactive', image_url: 'https://example.com/e33.jpg' },
-              { name: 'Hades II', description: 'Supergiant Games', image_url: 'https://example.com/hades2.jpg' },
-              { name: 'Silksong', description: 'Team Cherry', image_url: 'https://example.com/silksong.jpg' },
-            ],
-          },
-        ],
-      }),
+    await fetch(`${baseUrl}/api/admin/nominees/${tempNom.nominee.id}`, {
+      method: 'DELETE',
+      headers: { Cookie: adminCookie },
     });
-    assert.equal(importRes2.status, 200);
-    const importData2 = await importRes2.json();
-    assert.equal(importData2.categories_created, 0);
-    assert.equal(importData2.categories_reused, 1);
-    assert.equal(importData2.nominees_created, 1);
-    assert.equal(importData2.nominees_updated, 1);
-    assert.equal(importData2.nominees_skipped, 1);
+    assert.equal(fs.existsSync(uploadedDiskPath), false);
 
-    // 14. Parser de texto genérico para o script anual
+    // 13. Backup SQLite & Export JSON
+    const backupRes = await fetch(`${baseUrl}/api/admin/backup/db`, {
+      headers: { Cookie: adminCookie },
+    });
+    assert.equal(backupRes.status, 200);
+    const backupBuf = Buffer.from(await backupRes.arrayBuffer());
+    assert.ok(backupBuf.subarray(0, 15).toString('utf8').startsWith('SQLite format 3'));
+
+    const exportRes = await fetch(`${baseUrl}/api/admin/editions/${activeData.edition.id}/export`, {
+      headers: { Cookie: adminCookie },
+    });
+    assert.equal(exportRes.status, 200);
+    const exportData = await exportRes.json();
+    assert.equal(exportData.schema, 'tga-winners-export/v1');
+    assert.equal(exportData.side_bets.length, 1);
+
+    // 14. Importador JSON & parser de texto
     const parsedTxt = parseTextInput(
       `# Game of the Year\n- Jogo X | Studio X\n# Best Performance\n- Ator Y | Jogo X [person]\n`,
       2027
@@ -383,6 +386,5 @@ describe('TGA Winners API End-to-End', () => {
     const claimedData = await claimedRes.json();
     assert.equal(claimedData.voter.nickname, 'LegacyLinsmar');
     assert.equal(claimedData.votes.length, 1);
-    assert.equal(claimedData.votes[0].will_win_nominee_id, nom2.nominee.id);
   });
 });

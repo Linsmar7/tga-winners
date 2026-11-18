@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { LogIn, UserPlus, Loader2, Trophy } from 'lucide-react';
+import { LogIn, UserPlus, Loader2, Trophy, Eye, EyeOff } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../lib/AuthContext';
 
@@ -14,6 +14,8 @@ export default function AuthPage() {
   const [mode, setMode] = useState(initialMode); // 'login' | 'register'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -25,8 +27,14 @@ export default function AuthPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
     setError(null);
+
+    if (mode === 'register' && password !== confirmPassword) {
+      setError('As senhas digitadas não conferem.');
+      return;
+    }
+
+    setSubmitting(true);
     try {
       if (mode === 'register') {
         await register(username, password);
@@ -116,18 +124,47 @@ export default function AuthPage() {
 
             <div>
               <label className="mb-1.5 block text-xs font-medium text-zinc-400">Senha</label>
-              <input
-                type="password"
-                required
-                minLength={4}
-                maxLength={100}
-                autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-                placeholder="Mínimo 4 caracteres"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition focus:border-amber-500"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={4}
+                  maxLength={100}
+                  autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                  placeholder="Mínimo 4 caracteres"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 pr-10 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition focus:border-amber-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-zinc-200"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
+
+            {mode === 'register' && (
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-zinc-400">
+                  Confirmar senha
+                </label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={4}
+                  maxLength={100}
+                  autoComplete="new-password"
+                  placeholder="Repita sua senha"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 outline-none transition focus:border-amber-500"
+                />
+              </div>
+            )}
 
             <button
               type="submit"

@@ -3,19 +3,39 @@ import { getDb } from '../db.js';
 import {
   hashPassword,
   readUserFromReq,
+  requireUser,
   signUserToken,
   verifyPassword,
 } from '../middleware/auth.js';
+import { createRateLimiter } from '../middleware/rateLimit.js';
+import { isHttpsReq } from '../lib/mappers.js';
 
 const router = express.Router();
 
-function setUserCookie(res, token) {
+const authLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: 'Muitas tentativas de acesso. Aguarde alguns minutos e tente novamente.',
+});
+
+function setUserCookie(req, res, token) {
   res.cookie('user_token', token, {
     httpOnly: true,
     sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production' && isHttpsReq(req),
     maxAge: 30 * 24 * 60 * 60 * 1000,
     path: '/',
   });
+}
+
+function validateUsername(rawUsername) {
+  if (rawUsername.length < 2 || rawUsername.length > 30) {
+    return 'O usuário deve ter entre 2 e 30 caracteres.';
+  }
+  if (!/^[\p{L}\p{N}._\- ]+$/u.test(rawUsername)) {
+    return 'Use apenas letras, números, espaços, ponto, hífen ou underline.';
+  }
+  return null;
 }
 
 /**
@@ -66,18 +86,14 @@ router.get('/me', (req, res) => {
   return res.json({ user: { id: dbUser.id, username: dbUser.username } });
 });
 
-router.post('/register', (req, res) => {
+router.post('/register', authLimiter, (req, res) => {
   const db = getDb();
   const rawUsername = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
   const rawPassword = typeof req.body?.password === 'string' ? req.body.password : '';
 
-  if (rawUsername.length < 2 || rawUsername.length > 30) {
-    return res.status(400).json({ error: 'O usuário deve ter entre 2 e 30 caracteres.' });
-  }
-  if (!/^[\p{L}\p{N}._\- ]+$/u.test(rawUsername)) {
-    return res
-      .status(400)
-      .json({ error: 'Use apenas letras, números, espaços, ponto, hífen ou underline.' });
+  const usernameErr = validateUsername(rawUsername);
+  if (usernameErr) {
+    return res.status(400).json({ error: usernameErr });
   }
   if (rawPassword.length < 4 || rawPassword.length > 100) {
     return res.status(400).json({ error: 'A senha deve ter pelo menos 4 caracteres.' });
@@ -105,12 +121,12 @@ router.post('/register', (req, res) => {
 
   const user = createAndClaim();
   const token = signUserToken(user);
-  setUserCookie(res, token);
+  setUserCookie(req, res, token);
 
   return res.status(201).json({ user });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', authLimiter, (req, res) => {
   const db = getDb();
   const rawUsername = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
   const rawPassword = typeof req.body?.password === 'string' ? req.body.password : '';
@@ -130,9 +146,67 @@ router.post('/login', (req, res) => {
   const cleanUser = { id: user.id, username: user.username };
   claimLegacyVoters(db, cleanUser);
   const token = signUserToken(cleanUser);
-  setUserCookie(res, token);
+  setUserCookie(req, res, token);
 
   return res.json({ user: cleanUser });
+});
+
+router.put('/password', requireUser, (req, res) => {
+  const db = getDb();
+  const currentPassword =
+    typeof req.body?.current_password === 'string' ? req.body.current_password : '';
+  const newPassword = typeof req.body?.new_password === 'string' ? req.body.new_password : '';
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Informe a senha atual e a nova senha.' });
+  }
+  if (newPassword.length < 4 || newPassword.length > 100) {
+    return res.status(400).json({ error: 'A nova senha deve ter pelo menos 4 caracteres.' });
+  }
+
+  const dbUser = db
+    .prepare('SELECT id, username, password_hash FROM users WHERE id = ?')
+    .get(req.user.id);
+  if (!dbUser) {
+    return res.status(401).json({ error: 'Usuário não encontrado.' });
+  }
+  if (!verifyPassword(currentPassword, dbUser.password_hash)) {
+    return res.status(400).json({ error: 'Senha atual incorreta.' });
+  }
+
+  const newHash = hashPassword(newPassword);
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, dbUser.id);
+
+  return res.json({ ok: true });
+});
+
+router.put('/username', requireUser, (req, res) => {
+  const db = getDb();
+  const rawUsername = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
+
+  const usernameErr = validateUsername(rawUsername);
+  if (usernameErr) {
+    return res.status(400).json({ error: usernameErr });
+  }
+
+  const duplicate = db
+    .prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?) AND id != ?')
+    .get(rawUsername, req.user.id);
+  if (duplicate) {
+    return res.status(409).json({ error: 'Este nome de usuário já está em uso.' });
+  }
+
+  const updateTx = db.transaction(() => {
+    db.prepare('UPDATE users SET username = ? WHERE id = ?').run(rawUsername, req.user.id);
+    db.prepare('UPDATE voters SET nickname = ? WHERE user_id = ?').run(rawUsername, req.user.id);
+  });
+  updateTx();
+
+  const updatedUser = { id: req.user.id, username: rawUsername };
+  const token = signUserToken(updatedUser);
+  setUserCookie(req, res, token);
+
+  return res.json({ user: updatedUser });
 });
 
 router.post('/logout', (req, res) => {

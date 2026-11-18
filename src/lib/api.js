@@ -1,17 +1,8 @@
-import { getDeviceFingerprint, getStoredVoterToken } from './voterIdentity';
-
 export async function apiFetch(path, options = {}) {
-  const { method = 'GET', body, headers = {}, includeVoterHeaders = false } = options;
+  const { method = 'GET', body, headers = {} } = options;
 
   const finalHeaders = { ...headers };
   let finalBody = body;
-
-  if (includeVoterHeaders) {
-    const token = getStoredVoterToken();
-    const fp = getDeviceFingerprint();
-    if (token) finalHeaders['X-Voter-Token'] = token;
-    if (fp) finalHeaders['X-Device-Fingerprint'] = fp;
-  }
 
   if (body !== undefined && !(body instanceof FormData)) {
     finalHeaders['Content-Type'] = 'application/json';

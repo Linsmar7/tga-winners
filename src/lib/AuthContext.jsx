@@ -40,13 +40,40 @@ export function AuthProvider({ children }) {
     return res.user;
   };
 
+  const changePassword = async (currentPassword, newPassword) => {
+    await apiFetch('/api/auth/password', {
+      method: 'PUT',
+      body: { current_password: currentPassword, new_password: newPassword },
+    });
+  };
+
+  const changeUsername = async (username) => {
+    const res = await apiFetch('/api/auth/username', {
+      method: 'PUT',
+      body: { username },
+    });
+    setUser(res.user);
+    return res.user;
+  };
+
   const logout = async () => {
     await apiFetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loadingAuth, login, register, logout, refreshAuth }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loadingAuth,
+        login,
+        register,
+        logout,
+        refreshAuth,
+        changePassword,
+        changeUsername,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

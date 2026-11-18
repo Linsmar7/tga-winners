@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { resolveNomineeMedia } from '../server/lib/nomineeLookup.js';
 
 /**
  * Script genérico anual para gerar o JSON de importação do TGA Winners
- * e buscar/validar URLs de imagem para cada indicado.
+ * e buscar/validar URLs de imagem + links Steam em paralelo (lotes de 5).
  *
  * Exemplos de uso:
  *   node scripts/fetch-nominees.mjs --input scripts/inputs/modelo-anual.txt --year 2027
@@ -11,8 +12,7 @@ import path from 'node:path';
  *   node scripts/fetch-nominees.mjs --input lista.txt --year 2027 --out tga-2027-import.json
  */
 
-const UA = 'TGAWinnersFetcher/1.0 (https://github.com/Linsmar7/tga-winners)';
-const imageCache = new Map();
+const BATCH_SIZE = 5;
 
 function parseArgs(argv) {
   const args = { input: null, year: null, out: null, noFetch: false };
@@ -36,9 +36,6 @@ export function parseTextInput(content, defaultYear) {
     const line = rawLine.trim();
     if (!line) continue;
 
-    // Comentário simples (# seguido de espaço só vira categoria se não for comentário de instrução?
-    // Na convenção do modelo-anual.txt, linhas de comentário no topo começam com "# " antes de qualquer item;
-    // mas para evitar ambiguidade, linhas começando com "//" ou ";" são comentários, e "## " ou "# " são categorias.)
     if (line.startsWith('//') || line.startsWith(';')) continue;
     if (line.startsWith('# ')) {
       const lower = line.toLowerCase();
@@ -74,7 +71,6 @@ export function parseTextInput(content, defaultYear) {
         body = body.slice(0, tagMatch.index).trim();
       }
 
-      // Divide por "|" ou "—"
       const parts = body.includes('|')
         ? body.split('|').map((s) => s.trim())
         : body.includes('—')
@@ -84,12 +80,14 @@ export function parseTextInput(content, defaultYear) {
       const name = parts[0] || '';
       const description = parts[1] || null;
       const imageUrl = parts[2] && parts[2].startsWith('http') ? parts[2] : null;
+      const externalUrl = parts[3] && parts[3].startsWith('http') ? parts[3] : null;
 
       if (name) {
         currentCategory.nominees.push({
           name,
           description,
           image_url: imageUrl,
+          external_url: externalUrl,
           kind,
         });
       }
@@ -102,185 +100,16 @@ export function parseTextInput(content, defaultYear) {
   };
 }
 
-function normalize(str) {
-  return (str || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function isGoodMatch(query, candidateTitle) {
-  const qWords = normalize(query).split(' ').filter((w) => w.length > 1);
-  const cNorm = normalize(candidateTitle);
-  if (!qWords.length) return false;
-  const matched = qWords.filter((w) => cNorm.includes(w));
-  return matched.length >= Math.max(1, Math.ceil(qWords.length * 0.6));
-}
-
-async function verifyImageUrl(url) {
-  if (!url || !url.startsWith('https://')) return false;
-  try {
-    const res = await fetch(url, {
-      method: 'HEAD',
-      headers: { 'User-Agent': UA },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (res.ok) {
-      const ct = res.headers.get('content-type') || '';
-      if (ct.startsWith('image/')) return true;
-    }
-    const getRes = await fetch(url, {
-      method: 'GET',
-      headers: { 'User-Agent': UA, Range: 'bytes=0-64' },
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!getRes.ok) return false;
-    const ct = getRes.headers.get('content-type') || '';
-    return ct.startsWith('image/');
-  } catch {
-    return false;
-  }
-}
-
-async function searchSteamImage(query, expectedName) {
-  try {
-    const url = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(query)}&l=english&cc=US`;
-    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(7000) });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const items = data?.items || [];
-    const match = items.find((it) => isGoodMatch(expectedName, it.name));
-    if (!match) return null;
-
-    const candidates = [
-      `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${match.id}/header.jpg`,
-      `https://cdn.cloudflare.steamstatic.com/steam/apps/${match.id}/header.jpg`,
-      match.tiny_image?.replace(/^http:/, 'https:'),
-    ].filter(Boolean);
-
-    for (const img of candidates) {
-      if (await verifyImageUrl(img)) return img;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchWikipediaFileUrl(fileTitle) {
-  if (!fileTitle) return null;
-  try {
-    const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(fileTitle)}&prop=imageinfo&iiprop=url&format=json`;
-    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(7000) });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const pages = Object.values(data?.query?.pages || {});
-    const img = pages[0]?.imageinfo?.[0]?.url;
-    if (img && (await verifyImageUrl(img))) return img;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function searchWikipediaImage(titleOrQuery, strict = false) {
-  if (!titleOrQuery) return null;
-  try {
-    const directUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(titleOrQuery.replace(/\s+/g, '_'))}`;
-    const directRes = await fetch(directUrl, {
-      headers: { 'User-Agent': UA },
-      signal: AbortSignal.timeout(7000),
-    });
-    if (directRes.ok) {
-      const data = await directRes.json();
-      const img = data?.thumbnail?.source || data?.originalimage?.source;
-      if (img && (await verifyImageUrl(img))) return img;
-    }
-
-    if (strict) return null;
-
-    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(titleOrQuery)}&srlimit=3&format=json`;
-    const searchRes = await fetch(searchUrl, {
-      headers: { 'User-Agent': UA },
-      signal: AbortSignal.timeout(7000),
-    });
-    if (!searchRes.ok) return null;
-    const searchData = await searchRes.json();
-    const results = searchData?.query?.search || [];
-
-    for (const item of results) {
-      if (!isGoodMatch(titleOrQuery, item.title)) continue;
-      const sumUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(item.title.replace(/\s+/g, '_'))}`;
-      const sumRes = await fetch(sumUrl, {
-        headers: { 'User-Agent': UA },
-        signal: AbortSignal.timeout(7000),
-      });
-      if (!sumRes.ok) continue;
-      const sumData = await sumRes.json();
-      const img = sumData?.thumbnail?.source || sumData?.originalimage?.source;
-      if (img && (await verifyImageUrl(img))) return img;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function searchItunesImage(query) {
-  try {
-    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=software&limit=3`;
-    const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(7000) });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const match = (data?.results || []).find((r) => isGoodMatch(query, r.trackName));
-    if (!match) return null;
-    const img = match.artworkUrl512 || match.artworkUrl100;
-    if (img && (await verifyImageUrl(img))) return img;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function resolveNomineeImage(nominee) {
-  if (nominee.image_url) return nominee.image_url;
-
-  const cacheKey = `${nominee.kind || 'game'}::${nominee.name}::${nominee.wiki || ''}::${nominee.wikiFile || ''}`;
-  if (imageCache.has(cacheKey)) return imageCache.get(cacheKey);
-
-  let img = null;
-
-  if (nominee.wikiFile) {
-    img = await fetchWikipediaFileUrl(nominee.wikiFile);
-  } else if (nominee.kind === 'person' || nominee.kind === 'media') {
-    img = await searchWikipediaImage(nominee.wiki || nominee.name, Boolean(nominee.strictWiki));
-    if (!img && nominee.fallbackGame) {
-      img =
-        (await searchSteamImage(nominee.fallbackGame, nominee.fallbackGame)) ||
-        (await searchWikipediaImage(`${nominee.fallbackGame} video game`));
-    }
-  } else if (nominee.kind === 'mobile') {
-    const targetApp = nominee.fallbackGame || nominee.name;
-    img =
-      (await searchItunesImage(targetApp)) ||
-      (await searchSteamImage(targetApp, targetApp)) ||
-      (await searchWikipediaImage(nominee.wiki || targetApp));
-  } else {
-    const targetGame = nominee.fallbackGame || nominee.name;
-    img = await searchSteamImage(nominee.steamQuery || targetGame, targetGame);
-    if (!img) {
-      img = await searchWikipediaImage(nominee.wiki || targetGame, Boolean(nominee.strictWiki));
-    }
-    if (!img && !nominee.wiki) {
-      img = await searchWikipediaImage(`${targetGame} video game`);
+async function processInBatches(items, batchSize, worker) {
+  const results = new Array(items.length);
+  for (let i = 0; i < items.length; i += batchSize) {
+    const slice = items.slice(i, i + batchSize);
+    const batchResults = await Promise.all(slice.map((item, idx) => worker(item, i + idx)));
+    for (let j = 0; j < batchResults.length; j++) {
+      results[i + j] = batchResults[j];
     }
   }
-
-  imageCache.set(cacheKey, img);
-  return img;
+  return results;
 }
 
 async function main() {
@@ -311,7 +140,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Processando TGA ${year} (${categories.length} categorias)...`);
+  console.log(`Processando TGA ${year} (${categories.length} categorias, lotes de ${BATCH_SIZE})...`);
 
   const outputCategories = [];
   let totalNominees = 0;
@@ -319,38 +148,34 @@ async function main() {
 
   for (let i = 0; i < categories.length; i++) {
     const cat = categories[i];
-    const cleanNominees = [];
+    const nomineesList = cat.nominees || [];
+    totalNominees += nomineesList.length;
 
-    for (const nom of cat.nominees || []) {
-      totalNominees += 1;
-      const imageUrl = args.noFetch
-        ? nom.image_url || null
-        : await resolveNomineeImage(nom);
-      if (imageUrl) foundImages += 1;
+    const cleanNominees = await processInBatches(nomineesList, BATCH_SIZE, async (nom) => {
+      const media = args.noFetch
+        ? { image_url: nom.image_url || null, external_url: nom.external_url || null }
+        : await resolveNomineeMedia(nom);
+      if (media.image_url) foundImages += 1;
 
-      cleanNominees.push({
+      return {
         name: nom.name,
         description: nom.description || null,
-        image_url: imageUrl || null,
-      });
-    }
+        image_url: media.image_url || null,
+        external_url: media.external_url || null,
+      };
+    });
 
     outputCategories.push({
       name: cat.name,
       display_order: cat.display_order || i + 1,
+      points_weight: cat.points_weight || 5,
       nominees: cleanNominees,
     });
     console.log(`[${i + 1}/${categories.length}] ${cat.name}`);
   }
 
-  const outJsonPath = path.resolve(
-    process.cwd(),
-    args.out || `tga-${year}-import.json`
-  );
-  const outMdPath = path.resolve(
-    process.cwd(),
-    `tga-${year}-nominees.md`
-  );
+  const outJsonPath = path.resolve(process.cwd(), args.out || `tga-${year}-import.json`);
+  const outMdPath = path.resolve(process.cwd(), `tga-${year}-nominees.md`);
 
   const importPayload = {
     schema: 'tga-winners-import/v1',
@@ -374,6 +199,9 @@ async function main() {
     for (const nom of cat.nominees) {
       mdLines.push(`- **${nom.name}**${nom.description ? ` — *${nom.description}*` : ''}`);
       mdLines.push(`  - Imagem: ${nom.image_url || '*(sem imagem automática)*'}`);
+      if (nom.external_url) {
+        mdLines.push(`  - Link: ${nom.external_url}`);
+      }
     }
     mdLines.push('');
   }
